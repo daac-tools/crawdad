@@ -38,7 +38,7 @@ fn add_find_overlapping_benches(
             for text in texts {
                 trie.map_text(text, &mut mapped);
                 for i in 0..mapped.len() {
-                    for (val, len) in trie.common_prefix_searcher(&mapped) {
+                    for (val, len) in trie.common_prefix_searcher(&mapped[i..]) {
                         sum += i + len + val as usize;
                     }
                 }
