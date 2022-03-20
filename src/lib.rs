@@ -183,15 +183,15 @@ mod tests {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
         let trie = builder::Builder::new().from_keys(&keys);
 
-        let mut text = vec![];
-        trie.map_text("世界中で世直し", &mut text);
+        let mut mapped = vec![];
+        trie.map_text("国民が世界中で世直し", &mut mapped);
 
         let mut results = vec![];
-        for i in 0..text.len() {
-            for (val, pos) in trie.common_prefix_searcher(&text[i..]) {
+        for i in 0..mapped.len() {
+            for (val, pos) in trie.common_prefix_searcher(&mapped[i..]) {
                 results.push((val, i + pos));
             }
         }
-        assert_eq!(results, vec![(0, 2), (1, 3), (2, 7)]);
+        assert_eq!(results, vec![(3, 2), (0, 5), (1, 6), (2, 10)]);
     }
 }
