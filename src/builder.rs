@@ -138,7 +138,7 @@ impl Builder {
             return;
         }
 
-        // Fetch and map labels.
+        // Fetches and maps labels.
         {
             self.labels.clear();
             let mut c1 = self.records[spos].key[depth];
