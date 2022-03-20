@@ -41,16 +41,6 @@ impl Trie {
         }
     }
 
-    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
-    where
-        K: AsRef<str>,
-    {
-        mapped.clear();
-        for c in text.as_ref().chars() {
-            mapped.push(self.mapper.get(c as u32));
-        }
-    }
-
     pub fn common_prefix_searcher<'k, 't>(
         &'t self,
         text: &'k [Option<u32>],
@@ -61,6 +51,20 @@ impl Trie {
             trie: self,
             idx: 0,
         }
+    }
+
+    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
+    where
+        K: AsRef<str>,
+    {
+        mapped.clear();
+        for c in text.as_ref().chars() {
+            mapped.push(self.mapper.get(c as u32));
+        }
+    }
+
+    pub fn heap_bytes(&self) -> usize {
+        self.mapper.heap_bytes() + self.nodes.len() * std::mem::size_of::<Node>()
     }
 
     #[inline(always)]

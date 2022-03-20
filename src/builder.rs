@@ -126,13 +126,15 @@ impl Builder {
     }
 
     fn arrange_nodes(&mut self, spos: usize, epos: usize, depth: usize, idx: u32) {
+        assert!(self.is_fixed(idx));
+
         if self.records[spos].key.len() == depth {
             assert_eq!(spos + 1, epos);
+            assert_eq!(self.records[spos].val & !OFFSET_MASK, 0);
+            // Sets IsLeaf = True
             self.nodes[idx as usize].base = self.records[spos].val | !OFFSET_MASK;
-            if self.records[spos].key[depth - 1] == END_MARKER {
-                let parent_idx = self.nodes[idx as usize].check;
-                self.nodes[parent_idx as usize].check |= !OFFSET_MASK;
-            }
+            // Note: HasLeaf must not be set here and should be set in release()
+            // because MSB of check is used to indicate vacant element.
             return;
         }
 
@@ -152,7 +154,7 @@ impl Builder {
         }
 
         let base = self.find_base(&self.labels);
-        if base == self.num_nodes() {
+        if base >= self.num_nodes() {
             self.enlarge();
         }
 
@@ -181,17 +183,31 @@ impl Builder {
 
     fn release(&mut self) {
         self.nodes[0].check = OFFSET_MASK;
-        if self.head_idx == INVALID_IDX {
-            return;
+        if self.head_idx != INVALID_IDX {
+            let mut node_idx = self.head_idx;
+            loop {
+                let next_idx = self.get_next(node_idx);
+                self.nodes[node_idx as usize].base = OFFSET_MASK;
+                self.nodes[node_idx as usize].check = OFFSET_MASK;
+                node_idx = next_idx;
+                if node_idx == self.head_idx {
+                    break;
+                }
+            }
         }
-        let mut node_idx = self.head_idx;
-        loop {
-            let next_idx = self.get_next(node_idx);
-            self.nodes[node_idx as usize].base = OFFSET_MASK;
-            self.nodes[node_idx as usize].check = OFFSET_MASK;
-            node_idx = next_idx;
-            if node_idx == self.head_idx {
-                break;
+        for idx in 0..self.nodes.len() {
+            // Empty?
+            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
+                continue;
+            }
+            // Leaf?
+            if self.nodes[idx].base & !OFFSET_MASK != 0 {
+                continue;
+            }
+            let em_idx = self.nodes[idx].base ^ END_CODE;
+            if self.nodes[em_idx as usize].check as usize == idx {
+                // Sets HasLeaf = True
+                self.nodes[idx].check |= !OFFSET_MASK;
             }
         }
     }
@@ -200,7 +216,7 @@ impl Builder {
     fn find_base(&self, labels: &[u32]) -> u32 {
         assert!(!labels.is_empty());
         if self.head_idx == INVALID_IDX {
-            return self.num_nodes();
+            return self.num_nodes() ^ labels[0];
         }
 
         let mut node_idx = self.head_idx;
@@ -214,7 +230,7 @@ impl Builder {
                 break;
             }
         }
-        self.num_nodes()
+        self.num_nodes() ^ labels[0]
     }
 
     #[inline(always)]
@@ -274,7 +290,7 @@ impl Builder {
     // If the most significant bit is unset, the state is fixed.
     #[inline(always)]
     fn is_fixed(&self, i: u32) -> bool {
-        (self.nodes[i as usize].check & !OFFSET_MASK) == 0
+        self.nodes[i as usize].check & !OFFSET_MASK == 0
     }
 
     // Unset the most significant bit.
@@ -287,16 +303,14 @@ impl Builder {
 
     #[inline(always)]
     fn get_next(&self, i: u32) -> u32 {
-        let x = self.nodes[i as usize].base;
-        assert_ne!(x & !OFFSET_MASK, 0);
-        x & OFFSET_MASK
+        assert_ne!(self.nodes[i as usize].base & !OFFSET_MASK, 0, "i={}", i);
+        self.nodes[i as usize].base & OFFSET_MASK
     }
 
     #[inline(always)]
     fn get_prev(&self, i: u32) -> u32 {
-        let x = self.nodes[i as usize].check;
-        assert_ne!(x & !OFFSET_MASK, 0);
-        x & OFFSET_MASK
+        assert_ne!(self.nodes[i as usize].check & !OFFSET_MASK, 0, "i={}", i);
+        self.nodes[i as usize].check & OFFSET_MASK
     }
 
     #[inline(always)]

@@ -39,4 +39,8 @@ impl CodeMapper {
         }
         None
     }
+
+    pub fn heap_bytes(&self) -> usize {
+        self.table.len() * std::mem::size_of::<u32>()
+    }
 }
