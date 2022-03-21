@@ -1,4 +1,4 @@
-use super::Record;
+use super::{make_prefix_free, Record};
 use crate::mapper::CodeMapper;
 use crate::trie::{xor::Trie, Node};
 
@@ -34,10 +34,12 @@ impl Builder {
             }
             records
         };
+
         self.mapper = CodeMapper::new(&Self::make_freqs(&self.records));
         assert_eq!(self.mapper.get(END_MARKER).unwrap(), END_CODE);
 
-        Self::make_prefix_free(&mut self.records);
+        make_prefix_free(&mut self.records);
+
         self.block_len = Self::get_block_len(self.mapper.alphabet_size());
         self.init_array();
         self.arrange_nodes(0, self.records.len(), 0, 0);
@@ -47,26 +49,6 @@ impl Builder {
             nodes: self.nodes,
             mapper: self.mapper,
         }
-    }
-
-    fn make_prefix_free(records: &mut [Record]) {
-        for i in 1..records.len() {
-            if Self::startswith(&records[i - 1].key, &records[i].key) {
-                records[i - 1].key.push(END_MARKER);
-            }
-        }
-    }
-
-    fn startswith(a: &[u32], b: &[u32]) -> bool {
-        if b.len() < a.len() {
-            return false;
-        }
-        for i in 0..a.len() {
-            if a[i] != b[i] {
-                return false;
-            }
-        }
-        true
     }
 
     fn make_freqs(records: &[Record]) -> Vec<u32> {
