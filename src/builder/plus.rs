@@ -1,7 +1,7 @@
 use super::{make_prefix_free, Record};
 use crate::trie::{plus::Trie, Node};
 
-use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
+use crate::{END_MARKER, INVALID_IDX, OFFSET_MASK};
 
 #[derive(Default)]
 pub struct Builder {
