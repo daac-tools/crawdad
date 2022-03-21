@@ -35,7 +35,7 @@ fn criterion_unidic_cps(c: &mut Criterion) {
     keys.sort_unstable();
     let texts = load_file("data/wagahaiwa_nekodearu.txt");
 
-    add_find_overlapping_benches(&mut group, &keys, &texts);
+    add_cps_benches(&mut group, &keys, &texts);
 }
 
 fn add_exact_match_benches(
@@ -92,12 +92,27 @@ fn add_exact_match_benches(
     });
 }
 
-fn add_find_overlapping_benches(
-    group: &mut BenchmarkGroup<WallTime>,
-    keys: &[String],
-    texts: &[String],
-) {
-    group.bench_function("crawdad", |b| {
+fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts: &[String]) {
+    group.bench_function("crawdad/plus", |b| {
+        let trie = crawdad::builder::plus::Builder::new().from_keys(keys);
+        let mut mapped = Vec::with_capacity(256);
+        b.iter(|| {
+            let mut sum = 0;
+            for text in texts {
+                trie.map_text(text, &mut mapped);
+                for i in 0..mapped.len() {
+                    for (val, len) in trie.common_prefix_searcher(&mapped[i..]) {
+                        sum += i + len + val as usize;
+                    }
+                }
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
+    group.bench_function("crawdad/xor", |b| {
         let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
