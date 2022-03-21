@@ -43,7 +43,20 @@ fn add_exact_match_benches(
     keys: &[String],
     queries: &[String],
 ) {
-    group.bench_function("crawdad", |b| {
+    group.bench_function("crawdad/plus", |b| {
+        let trie = crawdad::builder::plus::Builder::new().from_keys(keys);
+        b.iter(|| {
+            let mut sum = 0;
+            for query in queries {
+                sum += trie.exact_match(query).unwrap();
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
+    group.bench_function("crawdad/xor", |b| {
         let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
         b.iter(|| {
             let mut sum = 0;

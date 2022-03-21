@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::BufRead;
 use std::io::BufReader;
 use std::path::Path;
+use std::time::Instant;
 
 fn main() {
     {
@@ -15,10 +16,24 @@ fn main() {
 
 fn show_memory_stats(keys: &[String]) {
     {
-        let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
-        format_memory("trie", trie.heap_bytes());
+        println!("[crawdad::plus]");
+        let start = Instant::now();
+        let trie = crawdad::builder::plus::Builder::new().from_keys(keys);
+        let duration = start.elapsed();
+        print_memory("heap_bytes", trie.heap_bytes());
+        println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     {
+        println!("[crawdad::xor]");
+        let start = Instant::now();
+        let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
+        let duration = start.elapsed();
+        print_memory("heap_bytes", trie.heap_bytes());
+        println!("constr_sec: {:.3}", duration.as_secs_f64());
+    }
+    {
+        println!("[yada]");
+        let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys
                 .iter()
@@ -28,11 +43,13 @@ fn show_memory_stats(keys: &[String]) {
                 .collect::<Vec<_>>(),
         )
         .unwrap();
-        format_memory("yada", data.len());
+        let duration = start.elapsed();
+        print_memory("heap_bytes", data.len());
+        println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
 }
 
-fn format_memory(title: &str, bytes: usize) {
+fn print_memory(title: &str, bytes: usize) {
     println!(
         "{}: {} bytes, {:.3} MiB",
         title,
