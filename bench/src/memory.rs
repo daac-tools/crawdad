@@ -15,7 +15,7 @@ fn main() {
 
 fn show_memory_stats(keys: &[String]) {
     {
-        let trie = crawdad::builder_xor::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
         format_memory("trie", trie.heap_bytes());
     }
     {

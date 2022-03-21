@@ -31,7 +31,7 @@ fn add_find_overlapping_benches(
     texts: &[String],
 ) {
     group.bench_function("crawdad", |b| {
-        let trie = crawdad::builder_xor::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;

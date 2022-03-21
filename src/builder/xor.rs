@@ -1,13 +1,8 @@
+use super::Record;
 use crate::mapper::CodeMapper;
-use crate::{Node, Trie};
+use crate::trie::{xor::Trie, Node};
 
 use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
-
-#[derive(Default)]
-struct Record {
-    key: Vec<u32>,
-    val: u32,
-}
 
 #[derive(Default)]
 pub struct Builder {
