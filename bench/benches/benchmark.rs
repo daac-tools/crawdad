@@ -12,6 +12,19 @@ const SAMPLE_SIZE: usize = 10;
 const WARM_UP_TIME: Duration = Duration::from_secs(5);
 const MEASURE_TIME: Duration = Duration::from_secs(10);
 
+fn criterion_unidic_exact(c: &mut Criterion) {
+    let mut group = c.benchmark_group("unidic/exact");
+    group.sample_size(SAMPLE_SIZE);
+    group.warm_up_time(WARM_UP_TIME);
+    group.measurement_time(MEASURE_TIME);
+    group.sampling_mode(SamplingMode::Flat);
+    let mut keys = load_file("data/unidic/unidic");
+    keys.sort_unstable();
+    let queries = load_file("data/unidic/unidic.1k.queries");
+
+    add_exact_match_benches(&mut group, &keys, &queries);
+}
+
 fn criterion_unidic_cps(c: &mut Criterion) {
     let mut group = c.benchmark_group("unidic/cps");
     group.sample_size(SAMPLE_SIZE);
@@ -23,6 +36,47 @@ fn criterion_unidic_cps(c: &mut Criterion) {
     let texts = load_file("data/wagahaiwa_nekodearu.txt");
 
     add_find_overlapping_benches(&mut group, &keys, &texts);
+}
+
+fn add_exact_match_benches(
+    group: &mut BenchmarkGroup<WallTime>,
+    keys: &[String],
+    queries: &[String],
+) {
+    group.bench_function("crawdad", |b| {
+        let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
+        b.iter(|| {
+            let mut sum = 0;
+            for query in queries {
+                sum += trie.exact_match(query).unwrap();
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
+    group.bench_function("yada", |b| {
+        let data = yada::builder::DoubleArrayBuilder::build(
+            &keys
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(i, key)| (key, i as u32))
+                .collect::<Vec<_>>(),
+        )
+        .unwrap();
+        let da = yada::DoubleArray::new(data);
+        b.iter(|| {
+            let mut sum = 0;
+            for query in queries {
+                sum += da.exact_match_search(query).unwrap();
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
 }
 
 fn add_find_overlapping_benches(
@@ -86,5 +140,5 @@ where
     buf.lines().map(|line| line.unwrap()).collect()
 }
 
-criterion_group!(benches, criterion_unidic_cps);
+criterion_group!(benches, criterion_unidic_exact, criterion_unidic_cps);
 criterion_main!(benches);
