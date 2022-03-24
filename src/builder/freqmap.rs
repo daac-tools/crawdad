@@ -115,32 +115,8 @@ impl Builder {
             return;
         }
 
-        // Fetches and maps labels.
-        {
-            self.labels.clear();
-            let mut c1 = self.records[spos].key[depth];
-            for i in spos + 1..epos {
-                let c2 = self.records[i].key[depth];
-                if c1 != c2 {
-                    assert!(c1 < c2);
-                    self.labels.push(self.mapper.get(c1).unwrap());
-                    c1 = c2;
-                }
-            }
-            self.labels.push(self.mapper.get(c1).unwrap());
-        }
-
-        let base = self.find_base(&self.labels);
-        if base >= self.num_nodes() {
-            self.enlarge();
-        }
-
-        self.nodes[idx as usize].base = base;
-        for i in 0..self.labels.len() {
-            let child_idx = base ^ self.labels[i];
-            self.fix_node(child_idx);
-            self.nodes[child_idx as usize].check = idx;
-        }
+        self.fetch_labels(spos, epos, depth);
+        let base = self.define_nodes(idx);
 
         let mut i1 = spos;
         let mut c1 = self.records[i1].key[depth];
@@ -187,6 +163,35 @@ impl Builder {
                 self.nodes[idx].check |= !OFFSET_MASK;
             }
         }
+    }
+
+    fn fetch_labels(&mut self, spos: usize, epos: usize, depth: usize) {
+        self.labels.clear();
+        let mut c1 = self.records[spos].key[depth];
+        for i in spos + 1..epos {
+            let c2 = self.records[i].key[depth];
+            if c1 != c2 {
+                assert!(c1 < c2);
+                self.labels.push(self.mapper.get(c1).unwrap());
+                c1 = c2;
+            }
+        }
+        self.labels.push(self.mapper.get(c1).unwrap());
+    }
+
+    fn define_nodes(&mut self, idx: u32) -> u32 {
+        let base = self.find_base(&self.labels);
+        if base >= self.num_nodes() {
+            self.enlarge();
+        }
+
+        self.nodes[idx as usize].base = base;
+        for i in 0..self.labels.len() {
+            let child_idx = base ^ self.labels[i];
+            self.fix_node(child_idx);
+            self.nodes[child_idx as usize].check = idx;
+        }
+        base
     }
 
     /// Finds a valid BASE value in a simple manner.

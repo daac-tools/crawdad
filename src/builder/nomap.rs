@@ -7,7 +7,7 @@ use crate::{END_MARKER, INVALID_IDX, OFFSET_MASK};
 pub struct Builder {
     records: Vec<Record>,
     nodes: Vec<Node>,
-    codes: Vec<i32>,
+    labels: Vec<i32>,
     max_code: i32,
     head_idx: u32,
 }
@@ -97,34 +97,8 @@ impl Builder {
             return;
         }
 
-        // Fetches and maps labels.
-        {
-            self.codes.clear();
-            let mut c1 = self.records[spos].key[depth];
-            for i in spos + 1..epos {
-                let c2 = self.records[i].key[depth];
-                if c1 != c2 {
-                    assert!(c1 < c2);
-                    self.codes.push(c1 as i32);
-                    c1 = c2;
-                }
-            }
-            self.codes.push(c1 as i32);
-        }
-
-        let base = self.find_base(&self.codes);
-        let max_idx = (base + self.codes.last().unwrap()) as u32;
-
-        if self.num_nodes() <= max_idx {
-            self.enlarge(max_idx);
-        }
-
-        self.nodes[idx as usize].base = (base + self.max_code) as u32;
-        for i in 0..self.codes.len() {
-            let child_idx = base + self.codes[i];
-            self.fix_node(child_idx as u32);
-            self.nodes[child_idx as usize].check = idx;
-        }
+        self.fetch_labels(spos, epos, depth);
+        let base = self.define_nodes(idx);
 
         let mut i1 = spos;
         let mut c1 = self.records[i1].key[depth];
@@ -173,6 +147,37 @@ impl Builder {
                 }
             }
         }
+    }
+
+    fn fetch_labels(&mut self, spos: usize, epos: usize, depth: usize) {
+        self.labels.clear();
+        let mut c1 = self.records[spos].key[depth];
+        for i in spos + 1..epos {
+            let c2 = self.records[i].key[depth];
+            if c1 != c2 {
+                assert!(c1 < c2);
+                self.labels.push(c1 as i32);
+                c1 = c2;
+            }
+        }
+        self.labels.push(c1 as i32);
+    }
+
+    fn define_nodes(&mut self, idx: u32) -> i32 {
+        let base = self.find_base(&self.labels);
+        let max_idx = (base + self.labels.last().unwrap()) as u32;
+
+        if self.num_nodes() <= max_idx {
+            self.enlarge(max_idx);
+        }
+
+        self.nodes[idx as usize].base = (base + self.max_code) as u32;
+        for i in 0..self.labels.len() {
+            let child_idx = base + self.labels[i];
+            self.fix_node(child_idx as u32);
+            self.nodes[child_idx as usize].check = idx;
+        }
+        base
     }
 
     /// Finds a valid BASE value in a simple manner.
