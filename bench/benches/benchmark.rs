@@ -196,8 +196,8 @@ where
 
 criterion_group!(
     benches,
-    // criterion_unidic_exact,
-    // criterion_unidic_cps,
+    criterion_unidic_exact,
+    criterion_unidic_cps,
     criterion_ipadic_exact,
     criterion_ipadic_cps,
 );
