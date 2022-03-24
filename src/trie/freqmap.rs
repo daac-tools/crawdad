@@ -1,8 +1,11 @@
 use super::Node;
+use crate::mapper::CodeMapper;
+
+use crate::END_CODE;
 
 pub struct Trie {
     pub(crate) nodes: Vec<Node>,
-    pub(crate) max_code: i32,
+    pub(crate) mapper: CodeMapper,
 }
 
 impl Trie {
@@ -12,8 +15,12 @@ impl Trie {
     {
         let mut idx = 0;
         for c in key.as_ref().chars() {
-            if let Some(child_id) = self.get_child_id(idx, c as u32) {
-                idx = child_id;
+            if let Some(mc) = self.mapper.get(c as u32) {
+                if let Some(child_id) = self.get_child_id(idx, mc) {
+                    idx = child_id;
+                } else {
+                    return None;
+                }
             } else {
                 return None;
             }
@@ -21,7 +28,7 @@ impl Trie {
         if self.nodes[idx as usize].is_leaf() {
             Some(self.nodes[idx as usize].get_base())
         } else if self.nodes[idx as usize].has_leaf() {
-            let leaf_id = self.get_base(idx);
+            let leaf_id = self.nodes[idx as usize].get_base() ^ END_CODE;
             debug_assert_eq!(self.nodes[leaf_id as usize].get_check(), idx);
             Some(self.nodes[leaf_id as usize].get_base())
         } else {
@@ -31,7 +38,7 @@ impl Trie {
 
     pub fn common_prefix_searcher<'k, 't>(
         &'t self,
-        text: &'k [u32],
+        text: &'k [Option<u32>],
     ) -> CommonPrefixSearcher<'k, 't> {
         CommonPrefixSearcher {
             text,
@@ -41,46 +48,30 @@ impl Trie {
         }
     }
 
-    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<u32>)
+    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
     where
         K: AsRef<str>,
     {
         mapped.clear();
         for c in text.as_ref().chars() {
-            mapped.push(c as u32);
+            mapped.push(self.mapper.get(c as u32));
         }
     }
 
     pub fn heap_bytes(&self) -> usize {
-        self.nodes.len() * std::mem::size_of::<Node>()
+        self.mapper.heap_bytes() + self.nodes.len() * std::mem::size_of::<Node>()
     }
 
     #[inline(always)]
-    fn get_child_id(&self, idx: u32, c: u32) -> Option<u32> {
+    fn get_child_id(&self, idx: u32, mc: u32) -> Option<u32> {
         if self.nodes[idx as usize].is_leaf() {
             return None;
         }
-        let child_idx = (self.get_base(idx) + c as i32) as u32;
-        if let Some(check) = self.get_check(child_idx) {
-            if check == idx {
-                return Some(child_idx);
-            }
+        let child_idx = self.nodes[idx as usize].get_base() ^ mc;
+        if self.nodes[child_idx as usize].get_check() == idx {
+            return Some(child_idx);
         }
         None
-    }
-
-    #[inline(always)]
-    fn get_base(&self, idx: u32) -> i32 {
-        self.nodes[idx as usize].get_base() as i32 - self.max_code
-    }
-
-    #[inline(always)]
-    fn get_check(&self, idx: u32) -> Option<u32> {
-        if let Some(node) = self.nodes.get(idx as usize) {
-            Some(node.get_check())
-        } else {
-            None
-        }
     }
 
     #[inline(always)]
@@ -95,7 +86,7 @@ impl Trie {
 
     #[inline(always)]
     fn get_leaf(&self, idx: u32) -> u32 {
-        let leaf_id = self.get_base(idx) as u32;
+        let leaf_id = self.nodes[idx as usize].get_base() ^ END_CODE;
         debug_assert_eq!(self.nodes[leaf_id as usize].get_check(), idx);
         leaf_id
     }
@@ -108,7 +99,7 @@ impl Trie {
 }
 
 pub struct CommonPrefixSearcher<'k, 't> {
-    text: &'k [u32],
+    text: &'k [Option<u32>],
     pos: usize,
     trie: &'t Trie,
     idx: u32,
@@ -120,8 +111,13 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         while self.pos < self.text.len() {
-            if let Some(child_idx) = self.trie.get_child_id(self.idx, self.text[self.pos]) {
-                self.idx = child_idx;
+            if let Some(mc) = self.text[self.pos] {
+                if let Some(child_idx) = self.trie.get_child_id(self.idx, mc) {
+                    self.idx = child_idx;
+                } else {
+                    self.pos = self.text.len();
+                    return None;
+                }
             } else {
                 self.pos = self.text.len();
                 return None;
@@ -142,7 +138,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
 
 #[cfg(test)]
 mod tests {
-    use crate::builder::plus::Builder;
+    use crate::builder::freqmap::Builder;
 
     #[test]
     fn test_exact_match() {

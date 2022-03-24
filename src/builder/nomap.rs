@@ -1,17 +1,15 @@
 use super::{make_prefix_free, Record};
-use crate::mapper::CodeMapper;
-use crate::trie::{xor::Trie, Node};
+use crate::trie::{nomap::Trie, Node};
 
-use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
+use crate::{END_MARKER, INVALID_IDX, OFFSET_MASK};
 
 #[derive(Default)]
 pub struct Builder {
     records: Vec<Record>,
     nodes: Vec<Node>,
-    mapper: CodeMapper,
-    labels: Vec<u32>,
+    codes: Vec<i32>,
+    max_code: i32,
     head_idx: u32,
-    block_len: u32,
 }
 
 impl Builder {
@@ -35,45 +33,27 @@ impl Builder {
             records
         };
 
-        self.mapper = CodeMapper::new(&Self::make_freqs(&self.records));
-        assert_eq!(self.mapper.get(END_MARKER).unwrap(), END_CODE);
+        self.max_code = {
+            let mut max_code = 0;
+            for rec in &self.records {
+                for &c in &rec.key {
+                    assert_ne!(c, END_MARKER);
+                    max_code = max_code.max(c);
+                }
+            }
+            max_code as i32
+        };
 
         make_prefix_free(&mut self.records);
 
-        self.block_len = Self::get_block_len(self.mapper.alphabet_size());
         self.init_array();
         self.arrange_nodes(0, self.records.len(), 0, 0);
         self.release();
 
         Trie {
             nodes: self.nodes,
-            mapper: self.mapper,
+            max_code: self.max_code,
         }
-    }
-
-    fn make_freqs(records: &[Record]) -> Vec<u32> {
-        let mut freqs = vec![];
-        for rec in records {
-            for &c in &rec.key {
-                let c = c as usize;
-                if freqs.len() <= c {
-                    freqs.resize(c + 1, 0);
-                }
-                freqs[c] += 1;
-            }
-        }
-        assert_eq!(freqs[END_MARKER as usize], 0);
-        freqs[END_MARKER as usize] += u32::MAX;
-        freqs
-    }
-
-    const fn get_block_len(alphabet_size: u32) -> u32 {
-        let max_code = alphabet_size - 1;
-        let mut shift = 1;
-        while (max_code >> shift) != 0 {
-            shift += 1;
-        }
-        1 << shift
     }
 
     #[inline(always)]
@@ -82,16 +62,18 @@ impl Builder {
     }
 
     fn init_array(&mut self) {
-        self.nodes.clear();
-        self.nodes.resize(self.block_len as usize, Node::default());
+        let max_idx = self.max_code as u32;
 
-        for i in 0..self.block_len {
+        self.nodes.clear();
+        self.nodes.resize(max_idx as usize + 1, Node::default());
+
+        for i in 0..=max_idx {
             if i == 0 {
-                self.set_prev(i, self.block_len - 1);
+                self.set_prev(i, max_idx);
             } else {
                 self.set_prev(i, i - 1);
             }
-            if i == self.block_len - 1 {
+            if i == max_idx {
                 self.set_next(i, 0);
             } else {
                 self.set_next(i, i + 1);
@@ -117,28 +99,30 @@ impl Builder {
 
         // Fetches and maps labels.
         {
-            self.labels.clear();
+            self.codes.clear();
             let mut c1 = self.records[spos].key[depth];
             for i in spos + 1..epos {
                 let c2 = self.records[i].key[depth];
                 if c1 != c2 {
                     assert!(c1 < c2);
-                    self.labels.push(self.mapper.get(c1).unwrap());
+                    self.codes.push(c1 as i32);
                     c1 = c2;
                 }
             }
-            self.labels.push(self.mapper.get(c1).unwrap());
+            self.codes.push(c1 as i32);
         }
 
-        let base = self.find_base(&self.labels);
-        if base >= self.num_nodes() {
-            self.enlarge();
+        let base = self.find_base(&self.codes);
+        let max_idx = (base + self.codes.last().unwrap()) as u32;
+
+        if self.num_nodes() <= max_idx {
+            self.enlarge(max_idx);
         }
 
-        self.nodes[idx as usize].base = base;
-        for i in 0..self.labels.len() {
-            let child_idx = base ^ self.labels[i];
-            self.fix_node(child_idx);
+        self.nodes[idx as usize].base = (base + self.max_code) as u32;
+        for i in 0..self.codes.len() {
+            let child_idx = base + self.codes[i];
+            self.fix_node(child_idx as u32);
             self.nodes[child_idx as usize].check = idx;
         }
 
@@ -148,14 +132,14 @@ impl Builder {
             let c2 = self.records[i2].key[depth];
             if c1 != c2 {
                 assert!(c1 < c2);
-                let child_idx = base ^ self.mapper.get(c1).unwrap();
-                self.arrange_nodes(i1, i2, depth + 1, child_idx);
+                let child_idx = base + c1 as i32;
+                self.arrange_nodes(i1, i2, depth + 1, child_idx as u32);
                 i1 = i2;
                 c1 = c2;
             }
         }
-        let child_idx = base ^ self.mapper.get(c1).unwrap();
-        self.arrange_nodes(i1, epos, depth + 1, child_idx);
+        let child_idx = base + c1 as i32;
+        self.arrange_nodes(i1, epos, depth + 1, child_idx as u32);
     }
 
     fn release(&mut self) {
@@ -181,25 +165,30 @@ impl Builder {
             if self.nodes[idx].base & !OFFSET_MASK != 0 {
                 continue;
             }
-            let em_idx = self.nodes[idx].base ^ END_CODE;
-            if self.nodes[em_idx as usize].check as usize == idx {
-                // Sets HasLeaf = True
-                self.nodes[idx].check |= !OFFSET_MASK;
+            let em_idx = self.nodes[idx].base as i32 - self.max_code;
+            if 0 <= em_idx && em_idx < self.num_nodes() as i32 {
+                if self.nodes[em_idx as usize].check as usize == idx {
+                    // Sets HasLeaf = True
+                    self.nodes[idx].check |= !OFFSET_MASK;
+                }
             }
         }
     }
 
     /// Finds a valid BASE value in a simple manner.
-    fn find_base(&self, labels: &[u32]) -> u32 {
-        assert!(!labels.is_empty());
+    fn find_base(&self, codes: &[i32]) -> i32 {
+        assert!(!codes.is_empty());
+
+        let min_code = codes[0];
         if self.head_idx == INVALID_IDX {
-            return self.num_nodes() ^ labels[0];
+            return self.num_nodes() as i32 - min_code;
         }
 
         let mut node_idx = self.head_idx;
         loop {
-            let base = node_idx ^ labels[0];
-            if self.verify_base(base, labels) {
+            debug_assert!(!self.is_fixed(node_idx));
+            let base = node_idx as i32 - min_code;
+            if self.verify_base(base, codes) {
                 return base;
             }
             node_idx = self.get_next(node_idx);
@@ -207,13 +196,16 @@ impl Builder {
                 break;
             }
         }
-        self.num_nodes() ^ labels[0]
+        self.num_nodes() as i32 - min_code
     }
 
     #[inline(always)]
-    fn verify_base(&self, base: u32, labels: &[u32]) -> bool {
-        for &label in labels {
-            let idx = base ^ label;
+    fn verify_base(&self, base: i32, codes: &[i32]) -> bool {
+        for &code in codes {
+            let idx = (base + code) as u32;
+            if self.num_nodes() <= idx {
+                return true;
+            }
             if self.is_fixed(idx) {
                 return false;
             }
@@ -240,27 +232,28 @@ impl Builder {
         }
     }
 
-    fn enlarge(&mut self) {
-        let old_len = self.num_nodes();
-        let new_len = old_len + self.block_len;
-
-        for i in old_len..new_len {
-            self.nodes.push(Node::default());
-            self.set_next(i, i + 1);
-            self.set_prev(i, i - 1);
+    fn enlarge(&mut self, max_idx: u32) {
+        while self.num_nodes() <= max_idx {
+            self.push_node();
         }
+    }
 
+    #[inline(always)]
+    fn push_node(&mut self) {
         if self.head_idx == INVALID_IDX {
-            self.set_prev(old_len, new_len - 1);
-            self.set_next(new_len - 1, old_len);
-            self.head_idx = old_len;
+            let new_idx = self.num_nodes() as u32;
+            self.nodes.push(Node::default());
+            self.set_next(new_idx, new_idx);
+            self.set_prev(new_idx, new_idx);
         } else {
             let head_idx = self.head_idx;
             let tail_idx = self.get_prev(head_idx);
-            self.set_prev(old_len, tail_idx);
-            self.set_next(tail_idx, old_len);
-            self.set_next(new_len - 1, head_idx);
-            self.set_prev(head_idx, new_len - 1);
+            let new_idx = self.num_nodes() as u32;
+            self.nodes.push(Node::default());
+            self.set_next(new_idx, head_idx);
+            self.set_prev(head_idx, new_idx);
+            self.set_prev(new_idx, tail_idx);
+            self.set_next(tail_idx, new_idx);
         }
     }
 

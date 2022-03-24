@@ -1,5 +1,5 @@
-pub mod plus;
-pub mod xor;
+pub mod freqmap;
+pub mod nomap;
 
 use crate::OFFSET_MASK;
 

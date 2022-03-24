@@ -22,17 +22,17 @@ fn main() {
 
 fn show_memory_stats(keys: &[String]) {
     {
-        println!("[crawdad::plus]");
+        println!("[crawdad::nomap]");
         let start = Instant::now();
-        let trie = crawdad::builder::plus::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::nomap::Builder::new().from_keys(keys);
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     {
-        println!("[crawdad::xor]");
+        println!("[crawdad::freqmap]");
         let start = Instant::now();
-        let trie = crawdad::builder::xor::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::freqmap::Builder::new().from_keys(keys);
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
         println!("constr_sec: {:.3}", duration.as_secs_f64());
