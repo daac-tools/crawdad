@@ -12,6 +12,12 @@ fn main() {
         keys.sort_unstable();
         show_memory_stats(&keys);
     }
+    {
+        println!("== data/ipadic.txt ==");
+        let mut keys = load_file("data/ipadic.txt");
+        keys.sort_unstable();
+        show_memory_stats(&keys);
+    }
 }
 
 fn show_memory_stats(keys: &[String]) {
