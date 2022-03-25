@@ -1,11 +1,12 @@
 use crate::Node;
 
-pub struct Trie {
+pub struct MpTrie {
     pub(crate) nodes: Vec<Node>,
+    pub(crate) suffixes: Vec<u32>,
     pub(crate) max_code: i32,
 }
 
-impl Trie {
+impl MpTrie {
     pub fn exact_match<K>(&self, key: K) -> Option<u32>
     where
         K: AsRef<str>,
@@ -110,7 +111,7 @@ impl Trie {
 pub struct CommonPrefixSearcher<'k, 't> {
     text: &'k [u32],
     pos: usize,
-    trie: &'t Trie,
+    trie: &'t MpTrie,
     idx: u32,
 }
 
