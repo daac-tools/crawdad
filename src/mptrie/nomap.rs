@@ -16,7 +16,7 @@ impl MpTrie {
 
         while !self.is_leaf(node_idx) {
             if let Some(c) = chars.next() {
-                if let Some(child_idx) = self.get_child_id(node_idx, c as u32) {
+                if let Some(child_idx) = self.get_child_idx(node_idx, c as u32) {
                     node_idx = child_idx;
                 } else {
                     return None;
@@ -70,7 +70,7 @@ impl MpTrie {
     }
 
     #[inline(always)]
-    fn get_child_id(&self, node_idx: u32, c: u32) -> Option<u32> {
+    fn get_child_idx(&self, node_idx: u32, c: u32) -> Option<u32> {
         if self.is_leaf(node_idx) {
             return None;
         }
@@ -136,7 +136,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
         while self.text_pos < self.text.len() {
             if let Some(child_idx) = self
                 .trie
-                .get_child_id(self.node_idx, self.text[self.text_pos])
+                .get_child_idx(self.node_idx, self.text[self.text_pos])
             {
                 self.node_idx = child_idx;
             } else {

@@ -16,7 +16,7 @@ impl Trie {
         let mut node_idx = 0;
         for c in key.as_ref().chars() {
             if let Some(mc) = self.mapper.get(c as u32) {
-                if let Some(child_idx) = self.get_child_id(node_idx, mc) {
+                if let Some(child_idx) = self.get_child_idx(node_idx, mc) {
                     node_idx = child_idx;
                 } else {
                     return None;
@@ -61,8 +61,8 @@ impl Trie {
     }
 
     #[inline(always)]
-    fn get_child_id(&self, node_idx: u32, mc: u32) -> Option<u32> {
-        if self.nodes[node_idx as usize].is_leaf() {
+    fn get_child_idx(&self, node_idx: u32, mc: u32) -> Option<u32> {
+        if self.is_leaf(node_idx) {
             return None;
         }
         let child_idx = self.get_base(node_idx) ^ mc;
@@ -120,7 +120,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
     fn next(&mut self) -> Option<Self::Item> {
         while self.text_pos < self.text.len() {
             if let Some(mc) = self.text[self.text_pos] {
-                if let Some(child_idx) = self.trie.get_child_id(self.node_idx, mc) {
+                if let Some(child_idx) = self.trie.get_child_idx(self.node_idx, mc) {
                     self.node_idx = child_idx;
                 } else {
                     self.text_pos = self.text.len();
