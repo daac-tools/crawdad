@@ -69,13 +69,51 @@ impl Builder {
         }
     }
 
-    // pub fn release_mptrie(self) -> MpTrie {
-    //     assert_eq!(self.suffix_thr, 1);
-    //     MpTrie {
-    //         nodes: self.nodes,
-    //         max_code: self.max_code,
-    //     }
-    // }
+    pub fn release_mptrie(mut self) -> MpTrie {
+        assert_eq!(self.suffix_thr, 1);
+
+        let mut suffixes = vec![];
+        for idx in 0..self.nodes.len() {
+            // Empty?
+            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
+                continue;
+            }
+            // Not Leaf?
+            if self.nodes[idx].base & !OFFSET_MASK == 0 {
+                continue;
+            }
+
+            assert_eq!(self.nodes[idx].check & !OFFSET_MASK, 0);
+            let parent_idx = self.nodes[idx].check as usize;
+
+            // HasLeaf?
+            if self.nodes[parent_idx].check & !OFFSET_MASK != 0 {
+                // `idx` is indicated from `parent_idx` with END_CODE?
+                if self.nodes[parent_idx].base == idx as u32 + self.max_code as u32 {
+                    let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
+                    assert_eq!(self.suffixes[suffix_idx].len(), 1);
+                    let suffix = &self.suffixes[suffix_idx][0];
+                    assert!(suffix.key.is_empty());
+                    self.nodes[idx].base = suffix.val | !OFFSET_MASK;
+                    continue;
+                }
+            }
+
+            let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
+            self.nodes[idx].base = suffixes.len() as u32 | !OFFSET_MASK;
+            assert_eq!(self.suffixes[suffix_idx].len(), 1);
+            let suffix = &self.suffixes[suffix_idx][0];
+            suffixes.push(suffix.key.len() as u32);
+            suffix.key.iter().for_each(|&x| suffixes.push(x));
+            suffixes.push(suffix.val);
+        }
+
+        MpTrie {
+            nodes: self.nodes,
+            suffixes,
+            max_code: self.max_code,
+        }
+    }
 
     #[inline(always)]
     pub fn num_nodes(&self) -> u32 {
@@ -342,6 +380,10 @@ impl Builder {
 mod tests {
     use super::*;
 
+    fn to_codes(k: &str) -> Vec<u32> {
+        k.chars().map(|c| c as u32).collect()
+    }
+
     #[test]
     fn test_suffix_thr_1() {
         let keys = vec!["ab", "abc", "adaab", "bbc"];
@@ -364,14 +406,14 @@ mod tests {
         assert_eq!(
             b.suffixes[2],
             vec![Suffix {
-                key: vec!['a' as u32, 'a' as u32, 'b' as u32],
+                key: to_codes("aab"),
                 val: 2
             }]
         );
         assert_eq!(
             b.suffixes[3],
             vec![Suffix {
-                key: vec!['b' as u32, 'c' as u32],
+                key: to_codes("bc"),
                 val: 3
             }]
         );
@@ -390,7 +432,7 @@ mod tests {
                     val: 0
                 },
                 Suffix {
-                    key: vec!['c' as u32],
+                    key: to_codes("c"),
                     val: 1
                 }
             ]
@@ -398,16 +440,29 @@ mod tests {
         assert_eq!(
             b.suffixes[1],
             vec![Suffix {
-                key: vec!['a' as u32, 'a' as u32, 'b' as u32],
+                key: to_codes("aab"),
                 val: 2
             }]
         );
         assert_eq!(
             b.suffixes[2],
             vec![Suffix {
-                key: vec!['b' as u32, 'c' as u32],
+                key: to_codes("bc"),
                 val: 3
             }]
+        );
+    }
+
+    #[test]
+    fn test_mptrie() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let trie = Builder::new()
+            .set_suffix_thr(1)
+            .from_keys(&keys)
+            .release_mptrie();
+        assert_eq!(
+            trie.suffixes,
+            vec![2, 'b' as u32, 'c' as u32, 3, 3, 'a' as u32, 'a' as u32, 'b' as u32, 2, 0, 1]
         );
     }
 }

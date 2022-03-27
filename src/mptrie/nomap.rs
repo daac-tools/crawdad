@@ -12,22 +12,37 @@ impl MpTrie {
         K: AsRef<str>,
     {
         let mut idx = 0;
-        for c in key.as_ref().chars() {
-            if let Some(child_id) = self.get_child_id(idx, c as u32) {
-                idx = child_id;
+        let mut chars = key.as_ref().chars();
+
+        while !self.is_leaf(idx) {
+            if let Some(c) = chars.next() {
+                if let Some(child_idx) = self.get_child_id(idx, c as u32) {
+                    idx = child_idx;
+                } else {
+                    return None;
+                }
+            } else if self.has_leaf(idx) {
+                let leaf_idx = self.get_leaf(idx) as u32;
+                return Some(self.get_value(leaf_idx));
             } else {
                 return None;
             }
         }
-        if self.nodes[idx as usize].is_leaf() {
-            Some(self.nodes[idx as usize].get_base())
-        } else if self.nodes[idx as usize].has_leaf() {
-            let leaf_id = self.get_base(idx);
-            debug_assert_eq!(self.nodes[leaf_id as usize].get_check(), idx);
-            Some(self.nodes[leaf_id as usize].get_base())
-        } else {
-            None
+
+        let suf_pos = self.get_value(idx) as usize;
+        let suf_len = self.suffixes[suf_pos] as usize;
+
+        for i in 1..=suf_len {
+            if let Some(c) = chars.next() {
+                if self.suffixes[suf_pos + i] != c as u32 {
+                    return None;
+                }
+            } else {
+                return None;
+            }
         }
+
+        Some(self.suffixes[suf_pos + suf_len + 1])
     }
 
     pub fn common_prefix_searcher<'k, 't>(
@@ -96,9 +111,9 @@ impl MpTrie {
 
     #[inline(always)]
     fn get_leaf(&self, idx: u32) -> u32 {
-        let leaf_id = self.get_base(idx) as u32;
-        debug_assert_eq!(self.nodes[leaf_id as usize].get_check(), idx);
-        leaf_id
+        let leaf_idx = self.get_base(idx) as u32;
+        debug_assert_eq!(self.get_check(leaf_idx), Some(idx));
+        leaf_idx
     }
 
     #[inline(always)]
@@ -129,9 +144,21 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
             }
             self.pos += 1;
             if self.trie.is_leaf(self.idx) {
-                let matched_pos = self.pos;
+                let mut matched_pos = self.pos;
                 self.pos = self.text.len();
-                return Some((self.trie.get_value(self.idx), matched_pos));
+                let suf_pos = self.trie.get_value(self.idx) as usize;
+                let suf_len = self.trie.suffixes[suf_pos] as usize;
+                for i in 1..=suf_len {
+                    if let Some(&mc) = self.text.get(matched_pos) {
+                        if self.trie.suffixes[suf_pos + i] != mc {
+                            return None;
+                        }
+                    } else {
+                        return None;
+                    }
+                    matched_pos += 1;
+                }
+                return Some((self.trie.suffixes[suf_pos + suf_len + 1], matched_pos));
             } else if self.trie.has_leaf(self.idx) {
                 let leaf_idx = self.trie.get_leaf(self.idx);
                 return Some((self.trie.get_value(leaf_idx), self.pos));
@@ -146,16 +173,33 @@ mod tests {
     use crate::builder::nomap::Builder;
 
     #[test]
-    fn test_exact_match() {
-        let keys = vec!["世界", "世界中", "世直し", "国民"];
-        let trie = Builder::new().from_keys(&keys).release_trie();
-        for (i, key) in keys.iter().enumerate() {
-            assert_eq!(trie.exact_match(&key), Some(i as u32));
-        }
+    fn test_exact_match_en() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let trie = Builder::new()
+            .set_suffix_thr(1)
+            .from_keys(&keys)
+            .release_mptrie();
+        assert_eq!(trie.exact_match("ab"), Some(0));
+        assert_eq!(trie.exact_match("abc"), Some(1));
+        assert_eq!(trie.exact_match("adaab"), Some(2));
+        assert_eq!(trie.exact_match("bbc"), Some(3));
     }
 
     #[test]
-    fn test_common_prefix_search() {
+    fn test_exact_match_ja() {
+        let keys = vec!["世界", "世界中", "世直し", "国民"];
+        let trie = Builder::new()
+            .set_suffix_thr(1)
+            .from_keys(&keys)
+            .release_mptrie();
+        assert_eq!(trie.exact_match("世界"), Some(0));
+        assert_eq!(trie.exact_match("世界中"), Some(1));
+        assert_eq!(trie.exact_match("世直し"), Some(2));
+        assert_eq!(trie.exact_match("国民"), Some(3));
+    }
+
+    #[test]
+    fn test_common_prefix_search_ja() {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
         let trie = Builder::new().from_keys(&keys).release_trie();
 
