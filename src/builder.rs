@@ -34,3 +34,12 @@ fn startswith(a: &[u32], b: &[u32]) -> bool {
     }
     true
 }
+
+fn pop_end_marker(mut x: Vec<u32>) -> Vec<u32> {
+    if let Some(&c) = x.last() {
+        if c == END_MARKER {
+            x.pop();
+        }
+    }
+    x
+}

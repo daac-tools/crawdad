@@ -1,6 +1,7 @@
 pub mod builder;
 mod mapper;
 pub mod mptrie;
+pub mod rhtrie;
 pub mod trie;
 
 pub const OFFSET_MASK: u32 = 0x7fff_ffff;
