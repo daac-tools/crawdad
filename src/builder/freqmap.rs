@@ -1,6 +1,7 @@
 use super::{make_prefix_free, Record};
 use crate::mapper::CodeMapper;
-use crate::trie::{freqmap::Trie, Node};
+use crate::trie::freqmap::Trie;
+use crate::Node;
 
 use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
 
@@ -19,7 +20,7 @@ impl Builder {
         Self::default()
     }
 
-    pub fn from_keys<I, K>(mut self, keys: I) -> Trie
+    pub fn from_keys<I, K>(mut self, keys: I) -> Self
     where
         I: IntoIterator<Item = K>,
         K: AsRef<str>,
@@ -43,8 +44,11 @@ impl Builder {
         self.block_len = Self::get_block_len(self.mapper.alphabet_size());
         self.init_array();
         self.arrange_nodes(0, self.records.len(), 0, 0);
-        self.release();
+        self.finish();
+        self
+    }
 
+    pub fn release_trie(self) -> Trie {
         Trie {
             nodes: self.nodes,
             mapper: self.mapper,
@@ -110,7 +114,7 @@ impl Builder {
             assert_eq!(self.records[spos].val & !OFFSET_MASK, 0);
             // Sets IsLeaf = True
             self.nodes[idx as usize].base = self.records[spos].val | !OFFSET_MASK;
-            // Note: HasLeaf must not be set here and should be set in release()
+            // Note: HasLeaf must not be set here and should be set in finish()
             // because MSB of check is used to indicate vacant element.
             return;
         }
@@ -134,7 +138,7 @@ impl Builder {
         self.arrange_nodes(i1, epos, depth + 1, child_idx);
     }
 
-    fn release(&mut self) {
+    fn finish(&mut self) {
         self.nodes[0].check = OFFSET_MASK;
         if self.head_idx != INVALID_IDX {
             let mut node_idx = self.head_idx;

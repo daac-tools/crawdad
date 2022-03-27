@@ -1,5 +1,7 @@
-use super::{make_prefix_free, Record};
-use crate::trie::{nomap::Trie, Node};
+use super::{make_prefix_free, Record, Suffix};
+use crate::mptrie::nomap::MpTrie;
+use crate::trie::nomap::Trie;
+use crate::Node;
 
 use crate::{END_MARKER, INVALID_IDX, OFFSET_MASK};
 
@@ -7,7 +9,9 @@ use crate::{END_MARKER, INVALID_IDX, OFFSET_MASK};
 pub struct Builder {
     records: Vec<Record>,
     nodes: Vec<Node>,
+    suffixes: Vec<Vec<Suffix>>,
     labels: Vec<i32>,
+    suffix_thr: usize,
     max_code: i32,
     head_idx: u32,
 }
@@ -17,7 +21,12 @@ impl Builder {
         Self::default()
     }
 
-    pub fn from_keys<I, K>(mut self, keys: I) -> Trie
+    pub fn set_suffix_thr(mut self, suffix_thr: usize) -> Self {
+        self.suffix_thr = suffix_thr;
+        self
+    }
+
+    pub fn from_keys<I, K>(mut self, keys: I) -> Self
     where
         I: IntoIterator<Item = K>,
         K: AsRef<str>,
@@ -48,10 +57,60 @@ impl Builder {
 
         self.init_array();
         self.arrange_nodes(0, self.records.len(), 0, 0);
-        self.release();
+        self.finish();
+        self
+    }
 
+    pub fn release_trie(self) -> Trie {
+        assert_eq!(self.suffix_thr, 0);
         Trie {
             nodes: self.nodes,
+            max_code: self.max_code,
+        }
+    }
+
+    pub fn release_mptrie(mut self) -> MpTrie {
+        assert_eq!(self.suffix_thr, 1);
+
+        let mut suffixes = vec![];
+        for idx in 0..self.nodes.len() {
+            // Empty?
+            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
+                continue;
+            }
+            // Not Leaf?
+            if self.nodes[idx].base & !OFFSET_MASK == 0 {
+                continue;
+            }
+
+            assert_eq!(self.nodes[idx].check & !OFFSET_MASK, 0);
+            let parent_idx = self.nodes[idx].check as usize;
+
+            // HasLeaf?
+            if self.nodes[parent_idx].check & !OFFSET_MASK != 0 {
+                // `idx` is indicated from `parent_idx` with END_CODE?
+                if self.nodes[parent_idx].base == idx as u32 + self.max_code as u32 {
+                    let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
+                    assert_eq!(self.suffixes[suffix_idx].len(), 1);
+                    let suffix = &self.suffixes[suffix_idx][0];
+                    assert!(suffix.key.is_empty());
+                    self.nodes[idx].base = suffix.val | !OFFSET_MASK;
+                    continue;
+                }
+            }
+
+            let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
+            self.nodes[idx].base = suffixes.len() as u32 | !OFFSET_MASK;
+            assert_eq!(self.suffixes[suffix_idx].len(), 1);
+            let suffix = &self.suffixes[suffix_idx][0];
+            suffixes.push(suffix.key.len() as u32);
+            suffix.key.iter().for_each(|&x| suffixes.push(x));
+            suffixes.push(suffix.val);
+        }
+
+        MpTrie {
+            nodes: self.nodes,
+            suffixes,
             max_code: self.max_code,
         }
     }
@@ -87,14 +146,30 @@ impl Builder {
     fn arrange_nodes(&mut self, spos: usize, epos: usize, depth: usize, idx: u32) {
         assert!(self.is_fixed(idx));
 
-        if self.records[spos].key.len() == depth {
-            assert_eq!(spos + 1, epos);
-            assert_eq!(self.records[spos].val & !OFFSET_MASK, 0);
-            // Sets IsLeaf = True
-            self.nodes[idx as usize].base = self.records[spos].val | !OFFSET_MASK;
-            // Note: HasLeaf must not be set here and should be set in release()
-            // because MSB of check is used to indicate vacant element.
-            return;
+        if self.suffix_thr == 0 {
+            if self.records[spos].key.len() == depth {
+                assert_eq!(spos + 1, epos);
+                assert_eq!(self.records[spos].val & !OFFSET_MASK, 0);
+                // Sets IsLeaf = True
+                self.nodes[idx as usize].base = self.records[spos].val | !OFFSET_MASK;
+                // Note: HasLeaf must not be set here and should be set in finish()
+                // because MSB of check is used to indicate vacant element.
+                return;
+            }
+        } else {
+            if epos - spos <= self.suffix_thr {
+                let mut suffixes = vec![];
+                for i in spos..epos {
+                    suffixes.push(Suffix {
+                        key: self.records[i].key[depth..].to_vec(),
+                        val: self.records[i].val,
+                    });
+                }
+                let suffix_idx = self.suffixes.len() as u32;
+                self.nodes[idx as usize].base = suffix_idx | !OFFSET_MASK;
+                self.suffixes.push(suffixes);
+                return;
+            }
         }
 
         self.fetch_labels(spos, epos, depth);
@@ -116,7 +191,7 @@ impl Builder {
         self.arrange_nodes(i1, epos, depth + 1, child_idx as u32);
     }
 
-    fn release(&mut self) {
+    fn finish(&mut self) {
         self.nodes[0].check = OFFSET_MASK;
         if self.head_idx != INVALID_IDX {
             let mut node_idx = self.head_idx;
@@ -298,5 +373,96 @@ impl Builder {
     fn set_prev(&mut self, i: u32, x: u32) {
         assert_eq!(x & !OFFSET_MASK, 0);
         self.nodes[i as usize].check = x | !OFFSET_MASK
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn to_codes(k: &str) -> Vec<u32> {
+        k.chars().map(|c| c as u32).collect()
+    }
+
+    #[test]
+    fn test_suffix_thr_1() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let b = Builder::new().set_suffix_thr(1).from_keys(&keys);
+        assert_eq!(b.max_code, 100);
+        assert_eq!(
+            b.suffixes[0],
+            vec![Suffix {
+                key: vec![],
+                val: 0
+            }]
+        );
+        assert_eq!(
+            b.suffixes[1],
+            vec![Suffix {
+                key: vec![],
+                val: 1
+            }]
+        );
+        assert_eq!(
+            b.suffixes[2],
+            vec![Suffix {
+                key: to_codes("aab"),
+                val: 2
+            }]
+        );
+        assert_eq!(
+            b.suffixes[3],
+            vec![Suffix {
+                key: to_codes("bc"),
+                val: 3
+            }]
+        );
+    }
+
+    #[test]
+    fn test_suffix_thr_2() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let b = Builder::new().set_suffix_thr(2).from_keys(&keys);
+        assert_eq!(b.max_code, 100);
+        assert_eq!(
+            b.suffixes[0],
+            vec![
+                Suffix {
+                    key: vec![END_MARKER as u32],
+                    val: 0
+                },
+                Suffix {
+                    key: to_codes("c"),
+                    val: 1
+                }
+            ]
+        );
+        assert_eq!(
+            b.suffixes[1],
+            vec![Suffix {
+                key: to_codes("aab"),
+                val: 2
+            }]
+        );
+        assert_eq!(
+            b.suffixes[2],
+            vec![Suffix {
+                key: to_codes("bc"),
+                val: 3
+            }]
+        );
+    }
+
+    #[test]
+    fn test_mptrie() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let trie = Builder::new()
+            .set_suffix_thr(1)
+            .from_keys(&keys)
+            .release_mptrie();
+        assert_eq!(
+            trie.suffixes,
+            vec![2, 'b' as u32, 'c' as u32, 3, 3, 'a' as u32, 'a' as u32, 'b' as u32, 2, 0, 1]
+        );
     }
 }

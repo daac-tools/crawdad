@@ -70,7 +70,9 @@ fn add_exact_match_benches(
     queries: &[String],
 ) {
     group.bench_function("crawdad/nomap", |b| {
-        let trie = crawdad::builder::nomap::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::nomap::Builder::new()
+            .from_keys(keys)
+            .release_trie();
         b.iter(|| {
             let mut sum = 0;
             for query in queries {
@@ -83,7 +85,9 @@ fn add_exact_match_benches(
     });
 
     group.bench_function("crawdad/freqmap", |b| {
-        let trie = crawdad::builder::freqmap::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::freqmap::Builder::new()
+            .from_keys(keys)
+            .release_trie();
         b.iter(|| {
             let mut sum = 0;
             for query in queries {
@@ -120,7 +124,9 @@ fn add_exact_match_benches(
 
 fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts: &[String]) {
     group.bench_function("crawdad/nomap", |b| {
-        let trie = crawdad::builder::nomap::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::nomap::Builder::new()
+            .from_keys(keys)
+            .release_trie();
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;
@@ -139,7 +145,9 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
     });
 
     group.bench_function("crawdad/freqmap", |b| {
-        let trie = crawdad::builder::freqmap::Builder::new().from_keys(keys);
+        let trie = crawdad::builder::freqmap::Builder::new()
+            .from_keys(keys)
+            .release_trie();
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;
