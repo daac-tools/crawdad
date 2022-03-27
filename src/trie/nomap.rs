@@ -10,20 +10,18 @@ impl Trie {
     where
         K: AsRef<str>,
     {
-        let mut idx = 0;
+        let mut node_idx = 0;
         for c in key.as_ref().chars() {
-            if let Some(child_id) = self.get_child_id(idx, c as u32) {
-                idx = child_id;
+            if let Some(child_idx) = self.get_child_id(node_idx, c as u32) {
+                node_idx = child_idx;
             } else {
                 return None;
             }
         }
-        if self.nodes[idx as usize].is_leaf() {
-            Some(self.nodes[idx as usize].get_base())
-        } else if self.nodes[idx as usize].has_leaf() {
-            let leaf_id = self.get_base(idx);
-            debug_assert_eq!(self.nodes[leaf_id as usize].get_check(), idx);
-            Some(self.nodes[leaf_id as usize].get_base())
+        if self.is_leaf(node_idx) {
+            Some(self.get_value(node_idx))
+        } else if self.has_leaf(node_idx) {
+            Some(self.get_value(self.get_leaf(node_idx)))
         } else {
             None
         }
@@ -35,9 +33,9 @@ impl Trie {
     ) -> CommonPrefixSearcher<'k, 't> {
         CommonPrefixSearcher {
             text,
-            pos: 0,
+            text_pos: 0,
             trie: self,
-            idx: 0,
+            node_idx: 0,
         }
     }
 
@@ -56,13 +54,13 @@ impl Trie {
     }
 
     #[inline(always)]
-    fn get_child_id(&self, idx: u32, c: u32) -> Option<u32> {
-        if self.nodes[idx as usize].is_leaf() {
+    fn get_child_id(&self, node_idx: u32, c: u32) -> Option<u32> {
+        if self.is_leaf(node_idx) {
             return None;
         }
-        let child_idx = (self.get_base(idx) + c as i32) as u32;
+        let child_idx = (self.get_base(node_idx) + c as i32) as u32;
         if let Some(check) = self.get_check(child_idx) {
-            if check == idx {
+            if check == node_idx {
                 return Some(child_idx);
             }
         }
@@ -70,13 +68,13 @@ impl Trie {
     }
 
     #[inline(always)]
-    fn get_base(&self, idx: u32) -> i32 {
-        self.nodes[idx as usize].get_base() as i32 - self.max_code
+    fn get_base(&self, node_idx: u32) -> i32 {
+        self.nodes[node_idx as usize].get_base() as i32 - self.max_code
     }
 
     #[inline(always)]
-    fn get_check(&self, idx: u32) -> Option<u32> {
-        if let Some(node) = self.nodes.get(idx as usize) {
+    fn get_check(&self, node_idx: u32) -> Option<u32> {
+        if let Some(node) = self.nodes.get(node_idx as usize) {
             Some(node.get_check())
         } else {
             None
@@ -84,34 +82,34 @@ impl Trie {
     }
 
     #[inline(always)]
-    fn is_leaf(&self, idx: u32) -> bool {
-        self.nodes[idx as usize].is_leaf()
+    fn is_leaf(&self, node_idx: u32) -> bool {
+        self.nodes[node_idx as usize].is_leaf()
     }
 
     #[inline(always)]
-    fn has_leaf(&self, idx: u32) -> bool {
-        self.nodes[idx as usize].has_leaf()
+    fn has_leaf(&self, node_idx: u32) -> bool {
+        self.nodes[node_idx as usize].has_leaf()
     }
 
     #[inline(always)]
-    fn get_leaf(&self, idx: u32) -> u32 {
-        let leaf_id = self.get_base(idx) as u32;
-        debug_assert_eq!(self.nodes[leaf_id as usize].get_check(), idx);
-        leaf_id
+    fn get_leaf(&self, node_idx: u32) -> u32 {
+        let leaf_idx = self.get_base(node_idx) as u32;
+        debug_assert_eq!(self.get_check(leaf_idx), Some(node_idx));
+        leaf_idx
     }
 
     #[inline(always)]
-    fn get_value(&self, idx: u32) -> u32 {
-        debug_assert!(self.is_leaf(idx));
-        self.nodes[idx as usize].get_base()
+    fn get_value(&self, node_idx: u32) -> u32 {
+        debug_assert!(self.is_leaf(node_idx));
+        self.nodes[node_idx as usize].get_base()
     }
 }
 
 pub struct CommonPrefixSearcher<'k, 't> {
     text: &'k [u32],
-    pos: usize,
+    text_pos: usize,
     trie: &'t Trie,
-    idx: u32,
+    node_idx: u32,
 }
 
 impl Iterator for CommonPrefixSearcher<'_, '_> {
@@ -119,21 +117,24 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.pos < self.text.len() {
-            if let Some(child_idx) = self.trie.get_child_id(self.idx, self.text[self.pos]) {
-                self.idx = child_idx;
+        while self.text_pos < self.text.len() {
+            if let Some(child_idx) = self
+                .trie
+                .get_child_id(self.node_idx, self.text[self.text_pos])
+            {
+                self.node_idx = child_idx;
             } else {
-                self.pos = self.text.len();
+                self.text_pos = self.text.len();
                 return None;
             }
-            self.pos += 1;
-            if self.trie.is_leaf(self.idx) {
-                let matched_pos = self.pos;
-                self.pos = self.text.len();
-                return Some((self.trie.get_value(self.idx), matched_pos));
-            } else if self.trie.has_leaf(self.idx) {
-                let leaf_idx = self.trie.get_leaf(self.idx);
-                return Some((self.trie.get_value(leaf_idx), self.pos));
+            self.text_pos += 1;
+            if self.trie.is_leaf(self.node_idx) {
+                let match_pos = self.text_pos;
+                self.text_pos = self.text.len();
+                return Some((self.trie.get_value(self.node_idx), match_pos));
+            } else if self.trie.has_leaf(self.node_idx) {
+                let leaf_idx = self.trie.get_leaf(self.node_idx);
+                return Some((self.trie.get_value(leaf_idx), self.text_pos));
             }
         }
         None
