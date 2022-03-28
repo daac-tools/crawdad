@@ -22,7 +22,7 @@ fn main() {
 
 fn show_memory_stats(keys: &[String]) {
     {
-        println!("[crawdad::nomap]");
+        println!("[crawdad/trie/nomap]");
         let start = Instant::now();
         let trie = crawdad::builder::nomap::Builder::new()
             .from_keys(keys)
@@ -32,11 +32,33 @@ fn show_memory_stats(keys: &[String]) {
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     {
-        println!("[crawdad::freqmap]");
+        println!("[crawdad/trie/freqmap]");
         let start = Instant::now();
         let trie = crawdad::builder::freqmap::Builder::new()
             .from_keys(keys)
             .release_trie();
+        let duration = start.elapsed();
+        print_memory("heap_bytes", trie.heap_bytes());
+        println!("constr_sec: {:.3}", duration.as_secs_f64());
+    }
+    {
+        println!("[crawdad/mptrie/nomap]");
+        let start = Instant::now();
+        let trie = crawdad::builder::nomap::Builder::new()
+            .set_suffix_thr(1)
+            .from_keys(keys)
+            .release_mptrie();
+        let duration = start.elapsed();
+        print_memory("heap_bytes", trie.heap_bytes());
+        println!("constr_sec: {:.3}", duration.as_secs_f64());
+    }
+    for t in 1..=3 {
+        println!("[crawdad/rhtrie/{}/nomap]", t);
+        let start = Instant::now();
+        let trie = crawdad::builder::nomap::Builder::new()
+            .set_suffix_thr(t)
+            .from_keys(keys)
+            .release_rhtrie();
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
         println!("constr_sec: {:.3}", duration.as_secs_f64());

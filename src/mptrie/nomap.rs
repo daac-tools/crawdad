@@ -67,6 +67,7 @@ impl MpTrie {
 
     pub fn heap_bytes(&self) -> usize {
         self.nodes.len() * std::mem::size_of::<Node>()
+            + self.tails.len() * std::mem::size_of::<u32>()
     }
 
     #[inline(always)]
