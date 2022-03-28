@@ -1,4 +1,5 @@
 pub mod builder;
+pub mod hasher;
 mod mapper;
 pub mod mptrie;
 pub mod rhtrie;

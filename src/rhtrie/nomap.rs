@@ -1,4 +1,4 @@
-use super::NaiveHasher;
+use crate::hasher::RollingHasher;
 use crate::Node;
 
 pub struct RhTrie {
@@ -40,7 +40,7 @@ impl RhTrie {
                 return None;
             }
             if tail_len == suffix.len() {
-                if self.tails[tail_pos + 1] == NaiveHasher::hash(&suffix) {
+                if self.tails[tail_pos + 1] == RollingHasher::hash(&suffix) {
                     return Some(self.tails[tail_pos + 2]);
                 }
             }
@@ -156,7 +156,7 @@ impl CommonPrefixSearcher<'_, '_> {
 
             let text_epos = self.text_pos + self.tail_len;
             if let Some(suffix) = self.text.get(self.text_pos..text_epos) {
-                let h = NaiveHasher::hash(suffix);
+                let h = RollingHasher::hash(suffix);
                 if h == hash_val {
                     return Some((tails[self.tail_pos - 1], self.text_pos + self.tail_len));
                 }

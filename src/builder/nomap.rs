@@ -1,6 +1,7 @@
 use super::{make_prefix_free, pop_end_marker, Record, Suffix};
+use crate::hasher::RollingHasher;
 use crate::mptrie::nomap::MpTrie;
-use crate::rhtrie::{nomap::RhTrie, NaiveHasher};
+use crate::rhtrie::nomap::RhTrie;
 use crate::trie::nomap::Trie;
 use crate::Node;
 
@@ -157,7 +158,7 @@ impl Builder {
             tails.push(suffixes.len() as u32); // # of suffixes
             for suffix in suffixes {
                 tails.push(suffix.key.len() as u32); // Len
-                tails.push(NaiveHasher::hash(&suffix.key)); // Hash value
+                tails.push(RollingHasher::hash(&suffix.key)); // Hash value
                 tails.push(suffix.val); // value
             }
         }
