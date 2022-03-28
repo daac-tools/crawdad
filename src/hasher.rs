@@ -27,4 +27,16 @@ impl RollingHasher {
         seq.iter().for_each(|&x| h.add(x));
         h.last()
     }
+
+    pub fn hash_with_option(seq: &[Option<u32>]) -> Option<u32> {
+        let mut h = Self::new(seq.len());
+        for &x in seq {
+            if let Some(x) = x {
+                h.add(x);
+            } else {
+                return None;
+            }
+        }
+        Some(h.last())
+    }
 }

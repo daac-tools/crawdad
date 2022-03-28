@@ -1,3 +1,4 @@
+pub mod freqmap;
 pub mod nomap;
 
 use crate::bytes;

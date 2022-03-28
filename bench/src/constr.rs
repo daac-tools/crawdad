@@ -46,10 +46,22 @@ fn show_memory_stats(keys: &[String]) {
         println!("vacant_ratio: {:.3}", trie.vacant_ratio());
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
+    // for t in 1..=3 {
+    //     println!("[crawdad/rhtrie/{}/nomap]", t);
+    //     let start = Instant::now();
+    //     let trie = crawdad::builder::nomap::Builder::new()
+    //         .set_suffix_thr(t)
+    //         .from_keys(keys)
+    //         .release_rhtrie(3);
+    //     let duration = start.elapsed();
+    //     print_memory("heap_bytes", trie.heap_bytes());
+    //     println!("vacant_ratio: {:.3}", trie.vacant_ratio());
+    //     println!("constr_sec: {:.3}", duration.as_secs_f64());
+    // }
     for t in 1..=3 {
-        println!("[crawdad/rhtrie/{}/nomap]", t);
+        println!("[crawdad/rhtrie/{}/freqmap]", t);
         let start = Instant::now();
-        let trie = crawdad::builder::nomap::Builder::new()
+        let trie = crawdad::builder::freqmap::Builder::new()
             .set_suffix_thr(t)
             .from_keys(keys)
             .release_rhtrie(3);
