@@ -53,6 +53,18 @@ impl Trie {
         self.nodes.len() * std::mem::size_of::<Node>()
     }
 
+    pub fn num_elems(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn num_vacants(&self) -> usize {
+        self.nodes.iter().filter(|nd| nd.is_vacant()).count()
+    }
+
+    pub fn vacant_ratio(&self) -> f64 {
+        self.num_vacants() as f64 / self.num_elems() as f64
+    }
+
     #[inline(always)]
     fn get_child_idx(&self, node_idx: u32, c: u32) -> Option<u32> {
         if self.is_leaf(node_idx) {

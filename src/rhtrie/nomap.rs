@@ -76,7 +76,19 @@ impl RhTrie {
 
     pub fn heap_bytes(&self) -> usize {
         self.nodes.len() * std::mem::size_of::<Node>()
-            + self.tails.len() * std::mem::size_of::<u32>()
+            + self.tails.len() * std::mem::size_of::<u8>()
+    }
+
+    pub fn num_elems(&self) -> usize {
+        self.nodes.len()
+    }
+
+    pub fn num_vacants(&self) -> usize {
+        self.nodes.iter().filter(|nd| nd.is_vacant()).count()
+    }
+
+    pub fn vacant_ratio(&self) -> f64 {
+        self.num_vacants() as f64 / self.num_elems() as f64
     }
 
     #[inline(always)]

@@ -29,6 +29,7 @@ fn show_memory_stats(keys: &[String]) {
             .release_trie();
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
+        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     {
@@ -39,17 +40,7 @@ fn show_memory_stats(keys: &[String]) {
             .release_trie();
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
-        println!("constr_sec: {:.3}", duration.as_secs_f64());
-    }
-    {
-        println!("[crawdad/mptrie/nomap]");
-        let start = Instant::now();
-        let trie = crawdad::builder::nomap::Builder::new()
-            .set_suffix_thr(1)
-            .from_keys(keys)
-            .release_mptrie();
-        let duration = start.elapsed();
-        print_memory("heap_bytes", trie.heap_bytes());
+        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     for t in 1..=3 {
@@ -58,9 +49,10 @@ fn show_memory_stats(keys: &[String]) {
         let trie = crawdad::builder::nomap::Builder::new()
             .set_suffix_thr(t)
             .from_keys(keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
+        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     {

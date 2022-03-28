@@ -37,4 +37,9 @@ impl Node {
     pub const fn has_leaf(&self) -> bool {
         self.check & !OFFSET_MASK != 0
     }
+
+    #[inline(always)]
+    pub const fn is_vacant(&self) -> bool {
+        self.base == OFFSET_MASK && self.check == OFFSET_MASK
+    }
 }
