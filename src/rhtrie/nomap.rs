@@ -1,3 +1,4 @@
+use super::NaiveHasher;
 use crate::Node;
 
 pub struct RhTrie {
@@ -38,8 +39,10 @@ impl RhTrie {
             if tail_len > suffix.len() {
                 return None;
             }
-            if tail_len == suffix.len() && self.tails[tail_pos + 1] == 42 {
-                return Some(self.tails[tail_pos + 2]);
+            if tail_len == suffix.len() {
+                if self.tails[tail_pos + 1] == NaiveHasher::hash(&suffix) {
+                    return Some(self.tails[tail_pos + 2]);
+                }
             }
             tail_pos += 3;
         }
@@ -59,7 +62,6 @@ impl RhTrie {
             tail_num: 0,
             tail_len: 0,
             tail_pos: 0,
-            suffix_hash: 42,
         }
     }
 
@@ -137,23 +139,34 @@ pub struct CommonPrefixSearcher<'k, 't> {
     tail_num: usize,
     tail_len: usize,
     tail_pos: usize,
-    suffix_hash: u32,
 }
 
 impl CommonPrefixSearcher<'_, '_> {
     fn next_suffix(&mut self) -> Option<(u32, usize)> {
         debug_assert_ne!(self.tail_num, 0);
+
         let tails = &self.trie.tails;
         while self.text_pos < self.text.len() && self.tail_num != 0 {
             let tail_len = tails[self.tail_pos] as usize;
             let hash_val = tails[self.tail_pos + 1];
+
             self.tail_num -= 1;
             self.tail_len = tail_len;
             self.tail_pos += 3;
-            if self.suffix_hash == hash_val {
-                return Some((tails[self.tail_pos - 1], self.text_pos + self.tail_len));
+
+            let text_epos = self.text_pos + self.tail_len;
+            if let Some(suffix) = self.text.get(self.text_pos..text_epos) {
+                let h = NaiveHasher::hash(suffix);
+                if h == hash_val {
+                    return Some((tails[self.tail_pos - 1], self.text_pos + self.tail_len));
+                }
+            } else {
+                self.tail_num = 0;
+                self.text_pos = self.text.len();
+                return None;
             }
         }
+
         if self.tail_num == 0 {
             self.text_pos = self.text.len();
         }
@@ -228,10 +241,73 @@ mod tests {
     }
 
     #[test]
-    fn test_common_prefix_search_ja() {
+    fn test_common_prefix_search_en_1() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let trie = Builder::new()
+            .set_suffix_thr(1)
+            .from_keys(&keys)
+            .release_rhtrie();
+
+        let mut mapped = vec![];
+        trie.map_text("adaabcabbc", &mut mapped);
+
+        let mut results = vec![];
+        for i in 0..mapped.len() {
+            for (val, pos) in trie.common_prefix_searcher(&mapped[i..]) {
+                results.push((val, i + pos));
+            }
+        }
+        assert_eq!(results, vec![(2, 5), (0, 5), (1, 6), (0, 8), (3, 10)]);
+    }
+
+    #[test]
+    fn test_common_prefix_search_en_2() {
+        let keys = vec!["ab", "abc", "adaab", "bbc"];
+        let trie = Builder::new()
+            .set_suffix_thr(2)
+            .from_keys(&keys)
+            .release_rhtrie();
+
+        let mut mapped = vec![];
+        trie.map_text("adaabcabbc", &mut mapped);
+
+        dbg!(&trie.tails);
+
+        let mut results = vec![];
+        for i in 0..mapped.len() {
+            for (val, pos) in trie.common_prefix_searcher(&mapped[i..]) {
+                dbg!((val, pos));
+                results.push((val, i + pos));
+            }
+        }
+        assert_eq!(results, vec![(2, 5), (0, 5), (1, 6), (0, 8), (3, 10)]);
+    }
+
+    #[test]
+    fn test_common_prefix_search_ja_1() {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
         let trie = Builder::new()
             .set_suffix_thr(1)
+            .from_keys(&keys)
+            .release_rhtrie();
+
+        let mut mapped = vec![];
+        trie.map_text("国民が世界中で世直し", &mut mapped);
+
+        let mut results = vec![];
+        for i in 0..mapped.len() {
+            for (val, pos) in trie.common_prefix_searcher(&mapped[i..]) {
+                results.push((val, i + pos));
+            }
+        }
+        assert_eq!(results, vec![(3, 2), (0, 5), (1, 6), (2, 10)]);
+    }
+
+    #[test]
+    fn test_common_prefix_search_ja_2() {
+        let keys = vec!["世界", "世界中", "世直し", "国民"];
+        let trie = Builder::new()
+            .set_suffix_thr(2)
             .from_keys(&keys)
             .release_rhtrie();
 
