@@ -5,19 +5,22 @@ use std::io::BufReader;
 use std::path::Path;
 use std::time::Instant;
 
+use clap::Parser;
+
+#[derive(Parser, Debug)]
+#[clap(name = "constr", about = "A program to measure.")]
+struct Args {
+    #[clap(short = 'k', long)]
+    keys_filename: String,
+}
+
 fn main() {
-    {
-        println!("== data/unidic/unidic ==");
-        let mut keys = load_file("data/unidic/unidic");
-        keys.sort_unstable();
-        show_memory_stats(&keys);
-    }
-    {
-        println!("== data/ipadic.txt ==");
-        let mut keys = load_file("data/ipadic.txt");
-        keys.sort_unstable();
-        show_memory_stats(&keys);
-    }
+    let args = Args::parse();
+
+    println!("keys_filename\t{}", &args.keys_filename);
+    let mut keys = load_file(&args.keys_filename);
+    keys.sort_unstable();
+    show_memory_stats(&keys);
 }
 
 fn show_memory_stats(keys: &[String]) {
