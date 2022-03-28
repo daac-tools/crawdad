@@ -43,3 +43,13 @@ fn pop_end_marker(mut x: Vec<u32>) -> Vec<u32> {
     }
     x
 }
+
+fn get_max_value(suffixes: &[Vec<Suffix>]) -> u32 {
+    let mut max_val = 0;
+    for sufs in suffixes {
+        for suf in sufs {
+            max_val = max_val.max(suf.val);
+        }
+    }
+    max_val
+}

@@ -1,9 +1,13 @@
+use super::TailIter;
 use crate::hasher::RollingHasher;
 use crate::Node;
 
 pub struct RhTrie {
     pub(crate) nodes: Vec<Node>,
-    pub(crate) tails: Vec<u32>,
+    pub(crate) tails: Vec<u8>,
+    pub(crate) hash_mask: u32,
+    pub(crate) hash_size: u8,
+    pub(crate) value_size: u8,
     pub(crate) max_code: i32,
 }
 
@@ -30,24 +34,21 @@ impl RhTrie {
         }
 
         let suffix: Vec<_> = chars.map(|c| c as u32).collect();
-        let mut tail_pos = self.get_value(node_idx) as usize;
-        let tail_num = self.tails[tail_pos] as usize;
+        let tail_pos = self.get_value(node_idx) as usize;
 
-        tail_pos += 1;
-        for _ in 0..tail_num {
-            let tail_len = self.tails[tail_pos] as usize;
+        let tail_iter = TailIter::new(&self.tails, self.hash_size, self.value_size).set(tail_pos);
+        for (tail_len, tail_hash, tail_value) in tail_iter {
             if tail_len > suffix.len() {
                 return None;
             }
             if tail_len == suffix.len() {
-                if self.tails[tail_pos + 1] == RollingHasher::hash(&suffix) {
-                    return Some(self.tails[tail_pos + 2]);
+                if tail_hash == RollingHasher::hash(&suffix) & self.hash_mask {
+                    return Some(tail_value);
                 }
             }
-            tail_pos += 3;
         }
 
-        return None;
+        None
     }
 
     pub fn common_prefix_searcher<'k, 't>(
@@ -59,9 +60,7 @@ impl RhTrie {
             text_pos: 0,
             trie: self,
             node_idx: 0,
-            tail_num: 0,
-            tail_len: 0,
-            tail_pos: 0,
+            tail_iter: TailIter::new(&self.tails, self.hash_size, self.value_size),
         }
     }
 
@@ -137,40 +136,25 @@ pub struct CommonPrefixSearcher<'k, 't> {
     text_pos: usize,
     trie: &'t RhTrie,
     node_idx: u32,
-    tail_num: usize,
-    tail_len: usize,
-    tail_pos: usize,
+    tail_iter: TailIter<'t>,
 }
 
 impl CommonPrefixSearcher<'_, '_> {
     fn next_suffix(&mut self) -> Option<(u32, usize)> {
-        debug_assert_ne!(self.tail_num, 0);
-
-        let tails = &self.trie.tails;
-        while self.text_pos < self.text.len() && self.tail_num != 0 {
-            let tail_len = tails[self.tail_pos] as usize;
-            let hash_val = tails[self.tail_pos + 1];
-
-            self.tail_num -= 1;
-            self.tail_len = tail_len;
-            self.tail_pos += 3;
-
-            let text_epos = self.text_pos + self.tail_len;
+        while let Some((tail_len, tail_hash, tail_value)) = self.tail_iter.next() {
+            dbg!((tail_len, tail_hash, tail_value));
+            let text_epos = self.text_pos + tail_len;
             if let Some(suffix) = self.text.get(self.text_pos..text_epos) {
-                let h = RollingHasher::hash(suffix);
-                if h == hash_val {
-                    return Some((tails[self.tail_pos - 1], self.text_pos + self.tail_len));
+                let hash = RollingHasher::hash(suffix) & self.trie.hash_mask;
+                if hash == tail_hash {
+                    return Some((tail_value, self.text_pos + tail_len));
                 }
             } else {
-                self.tail_num = 0;
-                self.text_pos = self.text.len();
-                return None;
+                self.tail_iter = self.tail_iter.clear();
+                break;
             }
         }
-
-        if self.tail_num == 0 {
-            self.text_pos = self.text.len();
-        }
+        self.text_pos = self.text.len();
         None
     }
 }
@@ -180,7 +164,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        if self.tail_num != 0 {
+        if self.tail_iter.is_valid() {
             return self.next_suffix();
         }
         while self.text_pos < self.text.len() {
@@ -196,9 +180,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
             self.text_pos += 1;
             if self.trie.is_leaf(self.node_idx) {
                 let tail_pos = self.trie.get_value(self.node_idx) as usize;
-                self.tail_num = self.trie.tails[tail_pos] as usize;
-                self.tail_len = 0;
-                self.tail_pos = tail_pos + 1;
+                self.tail_iter = self.tail_iter.set(tail_pos);
                 return self.next_suffix();
             } else if self.trie.has_leaf(self.node_idx) {
                 return Some((
@@ -221,7 +203,7 @@ mod tests {
         let trie = Builder::new()
             .set_suffix_thr(1)
             .from_keys(&keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
         assert_eq!(trie.exact_match("ab"), Some(0));
         assert_eq!(trie.exact_match("abc"), Some(1));
         assert_eq!(trie.exact_match("adaab"), Some(2));
@@ -234,7 +216,7 @@ mod tests {
         let trie = Builder::new()
             .set_suffix_thr(1)
             .from_keys(&keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
         assert_eq!(trie.exact_match("世界"), Some(0));
         assert_eq!(trie.exact_match("世界中"), Some(1));
         assert_eq!(trie.exact_match("世直し"), Some(2));
@@ -247,7 +229,7 @@ mod tests {
         let trie = Builder::new()
             .set_suffix_thr(1)
             .from_keys(&keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
 
         let mut mapped = vec![];
         trie.map_text("adaabcabbc", &mut mapped);
@@ -267,7 +249,7 @@ mod tests {
         let trie = Builder::new()
             .set_suffix_thr(2)
             .from_keys(&keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
 
         let mut mapped = vec![];
         trie.map_text("adaabcabbc", &mut mapped);
@@ -290,7 +272,7 @@ mod tests {
         let trie = Builder::new()
             .set_suffix_thr(1)
             .from_keys(&keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
 
         let mut mapped = vec![];
         trie.map_text("国民が世界中で世直し", &mut mapped);
@@ -310,7 +292,7 @@ mod tests {
         let trie = Builder::new()
             .set_suffix_thr(2)
             .from_keys(&keys)
-            .release_rhtrie();
+            .release_rhtrie(3);
 
         let mut mapped = vec![];
         trie.map_text("国民が世界中で世直し", &mut mapped);
