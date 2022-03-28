@@ -1,4 +1,4 @@
-const BASE: u32 = 13;
+const BASE: u32 = 7;
 
 pub struct RollingHasher {
     vals: Vec<u32>,
