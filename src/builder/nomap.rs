@@ -1,5 +1,6 @@
 use super::{get_max_value, make_prefix_free, pop_end_marker, Record, Suffix};
 use crate::bytes;
+use crate::embed_trie::{nomap::EmbedTrie, EmbedSuffix};
 use crate::hasher::RollingHasher;
 use crate::rhtrie::nomap::RhTrie;
 use crate::trie::nomap::Trie;
@@ -127,6 +128,67 @@ impl Builder {
             hash_mask,
             hash_size,
             value_size,
+            max_code: self.max_code,
+        }
+    }
+
+    pub fn release_embed_trie(mut self) -> EmbedTrie {
+        assert_eq!(self.suffix_thr, 1);
+
+        let mut vacant_idx = vec![];
+        let mut embed_idx = vec![];
+
+        for idx in 0..self.nodes.len() {
+            // Empty?
+            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
+                vacant_idx.push(idx);
+                continue;
+            }
+            // Not Leaf?
+            if self.nodes[idx].base & !OFFSET_MASK == 0 {
+                continue;
+            }
+
+            assert_eq!(self.nodes[idx].check & !OFFSET_MASK, 0);
+            let parent_idx = self.nodes[idx].check as usize;
+
+            // HasLeaf?
+            if self.nodes[parent_idx].check & !OFFSET_MASK != 0 {
+                // `idx` is indicated from `parent_idx` with END_CODE?
+                if self.nodes[parent_idx].base == idx as u32 + self.max_code as u32 {
+                    let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
+                    assert_eq!(self.suffixes[suffix_idx].len(), 1);
+                    let suffix = &self.suffixes[suffix_idx][0];
+                    assert!(suffix.key.is_empty());
+                    self.nodes[idx].base = suffix.val | !OFFSET_MASK;
+                    continue;
+                }
+            }
+
+            embed_idx.push(idx);
+        }
+
+        let mut vct_iter = vacant_idx.iter();
+        for emb_idx in embed_idx {
+            let vct_idx = if let Some(&vct_idx) = vct_iter.next() {
+                vct_idx
+            } else {
+                let vct_idx = self.nodes.len();
+                self.nodes.push(Node::default());
+                vct_idx
+            };
+
+            let suf_idx = (self.nodes[emb_idx].base & OFFSET_MASK) as usize;
+            self.nodes[emb_idx].base = vct_idx as u32 | !OFFSET_MASK;
+
+            assert_eq!(self.suffixes[suf_idx].len(), 1);
+            let suffix = &self.suffixes[suf_idx][0];
+
+            self.nodes[vct_idx] = EmbedSuffix::from_suffix(&suffix.key, suffix.val);
+        }
+
+        EmbedTrie {
+            nodes: self.nodes,
             max_code: self.max_code,
         }
     }

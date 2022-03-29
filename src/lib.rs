@@ -1,5 +1,6 @@
 pub mod builder;
 mod bytes;
+pub mod embed_trie;
 pub mod hasher;
 mod mapper;
 pub mod rhtrie;
@@ -10,7 +11,7 @@ pub const INVALID_IDX: u32 = 0xffff_ffff;
 pub const END_MARKER: u32 = 0;
 pub const END_CODE: u32 = 0;
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Copy)]
 pub struct Node {
     pub(crate) base: u32,
     pub(crate) check: u32,
@@ -35,6 +36,11 @@ impl Node {
     #[inline(always)]
     pub const fn has_leaf(&self) -> bool {
         self.check & !OFFSET_MASK != 0
+    }
+
+    #[inline(always)]
+    pub const fn is_embedded(&self) -> bool {
+        self.base & !OFFSET_MASK != 0 && self.check & !OFFSET_MASK != 0
     }
 
     #[inline(always)]
