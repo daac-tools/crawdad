@@ -1,5 +1,5 @@
 use crate::mapper::CodeMapper;
-use crate::Node;
+use crate::{Node, Statistics};
 
 use crate::END_CODE;
 
@@ -35,18 +35,6 @@ impl Trie {
         }
     }
 
-    pub fn common_prefix_searcher<'k, 't>(
-        &'t self,
-        text: &'k [Option<u32>],
-    ) -> CommonPrefixSearcher<'k, 't> {
-        CommonPrefixSearcher {
-            text,
-            text_pos: 0,
-            trie: self,
-            node_idx: 0,
-        }
-    }
-
     #[inline(always)]
     pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
     where
@@ -58,20 +46,17 @@ impl Trie {
         }
     }
 
-    pub fn heap_bytes(&self) -> usize {
-        self.mapper.heap_bytes() + self.nodes.len() * std::mem::size_of::<Node>()
-    }
-
-    pub fn num_elems(&self) -> usize {
-        self.nodes.len()
-    }
-
-    pub fn num_vacants(&self) -> usize {
-        self.nodes.iter().filter(|nd| nd.is_vacant()).count()
-    }
-
-    pub fn vacant_ratio(&self) -> f64 {
-        self.num_vacants() as f64 / self.num_elems() as f64
+    #[inline(always)]
+    pub fn common_prefix_searcher<'k, 't>(
+        &'t self,
+        text: &'k [Option<u32>],
+    ) -> CommonPrefixSearcher<'k, 't> {
+        CommonPrefixSearcher {
+            text,
+            text_pos: 0,
+            trie: self,
+            node_idx: 0,
+        }
     }
 
     #[inline(always)]
@@ -117,6 +102,20 @@ impl Trie {
     fn get_value(&self, node_idx: u32) -> u32 {
         debug_assert!(self.is_leaf(node_idx));
         self.nodes[node_idx as usize].get_base()
+    }
+}
+
+impl Statistics for Trie {
+    fn heap_bytes(&self) -> usize {
+        self.mapper.heap_bytes() + self.nodes.len() * std::mem::size_of::<Node>()
+    }
+
+    fn num_elems(&self) -> usize {
+        self.nodes.len()
+    }
+
+    fn num_vacants(&self) -> usize {
+        self.nodes.iter().filter(|nd| nd.is_vacant()).count()
     }
 }
 
@@ -169,6 +168,9 @@ mod tests {
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
+        assert_eq!(trie.exact_match("世"), None);
+        assert_eq!(trie.exact_match("日本"), None);
+        assert_eq!(trie.exact_match("世界中で"), None);
     }
 
     #[test]

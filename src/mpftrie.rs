@@ -1,6 +1,6 @@
 use crate::mapper::CodeMapper;
-use crate::utils;
-use crate::Node;
+use crate::{utils, Node, Statistics};
+
 use crate::END_CODE;
 
 use sucds::RsBitVector;
@@ -78,25 +78,6 @@ impl MpfTrie {
         }
     }
 
-    pub fn heap_bytes(&self) -> usize {
-        self.mapper.heap_bytes()
-            + self.nodes.len() * std::mem::size_of::<Node>()
-            + self.auxes.len() * std::mem::size_of::<(u8, u8)>()
-            + self.ranks.size_in_bytes()
-    }
-
-    pub fn num_elems(&self) -> usize {
-        self.nodes.len()
-    }
-
-    pub fn num_vacants(&self) -> usize {
-        self.nodes.iter().filter(|nd| nd.is_vacant()).count()
-    }
-
-    pub fn vacant_ratio(&self) -> f64 {
-        self.num_vacants() as f64 / self.num_elems() as f64
-    }
-
     #[inline(always)]
     fn get_child_idx(&self, node_idx: u32, mc: u32) -> Option<u32> {
         if self.is_leaf(node_idx) {
@@ -140,6 +121,23 @@ impl MpfTrie {
     fn get_value(&self, node_idx: u32) -> u32 {
         debug_assert!(self.is_leaf(node_idx));
         self.nodes[node_idx as usize].get_base()
+    }
+}
+
+impl Statistics for MpfTrie {
+    fn heap_bytes(&self) -> usize {
+        self.mapper.heap_bytes()
+            + self.nodes.len() * std::mem::size_of::<Node>()
+            + self.auxes.len() * std::mem::size_of::<(u8, u8)>()
+            + self.ranks.size_in_bytes()
+    }
+
+    fn num_elems(&self) -> usize {
+        self.nodes.len()
+    }
+
+    fn num_vacants(&self) -> usize {
+        self.nodes.iter().filter(|nd| nd.is_vacant()).count()
     }
 }
 
@@ -213,6 +211,9 @@ mod tests {
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
+        assert_eq!(trie.exact_match("世"), None);
+        assert_eq!(trie.exact_match("日本"), None);
+        assert_eq!(trie.exact_match("世界中で"), None);
     }
 
     #[test]

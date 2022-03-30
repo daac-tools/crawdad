@@ -1,7 +1,5 @@
-use std::io;
-
 /// pack_size returns the smallest number of bytes that can encode `n`.
-#[inline]
+#[inline(always)]
 pub fn pack_size(n: u32) -> u8 {
     if n < 1 << 8 {
         1
@@ -14,19 +12,17 @@ pub fn pack_size(n: u32) -> u8 {
     }
 }
 
-pub fn pack_u32<W: io::Write>(mut wtr: W, mut n: u32, nbytes: u8) -> io::Result<()> {
+#[inline(always)]
+pub fn pack_u32(vec: &mut Vec<u8>, mut n: u32, nbytes: u8) {
     assert!(1 <= nbytes && nbytes <= 4);
 
-    let mut buf = [0u8; 4];
-    for i in 0..nbytes {
-        buf[i as usize] = n as u8;
+    for _ in 0..nbytes {
+        vec.push(n as u8);
         n = n >> 8;
     }
-    wtr.write_all(&buf[..nbytes as usize])?;
-    Ok(())
 }
 
-#[inline]
+#[inline(always)]
 pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
     assert!(1 <= nbytes && nbytes <= 4);
 
@@ -38,6 +34,7 @@ pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
 }
 
 // https://github.com/aappleby/smhasher/blob/master/src/MurmurHash2.cpp
+#[inline(always)]
 pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
     let seed = 0xbc9f1d34;
 

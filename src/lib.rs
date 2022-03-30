@@ -14,6 +14,18 @@ pub use mpftrie::MpfTrie;
 pub use mptrie::MpTrie;
 pub use trie::Trie;
 
+pub trait Statistics {
+    fn heap_bytes(&self) -> usize;
+
+    fn num_elems(&self) -> usize;
+
+    fn num_vacants(&self) -> usize;
+
+    fn vacant_ratio(&self) -> f64 {
+        self.num_vacants() as f64 / self.num_elems() as f64
+    }
+}
+
 #[derive(Default, Clone, Copy)]
 pub struct Node {
     pub(crate) base: u32,

@@ -5,6 +5,8 @@ use std::io::BufReader;
 use std::path::Path;
 use std::time::Instant;
 
+use crawdad::Statistics;
+
 use clap::Parser;
 
 #[derive(Parser, Debug)]
