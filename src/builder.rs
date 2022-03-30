@@ -209,7 +209,7 @@ impl Builder {
     }
 
     #[inline(always)]
-    pub fn num_nodes(&self) -> u32 {
+    fn num_nodes(&self) -> u32 {
         self.nodes.len() as u32
     }
 

@@ -1,6 +1,6 @@
 use std::{fmt, result};
 
-/// A specialized Result type for Daachorse.
+/// A specialized Result type for Crawdad.
 pub type Result<T, E = CrawdadError> = result::Result<T, E>;
 
 #[derive(Debug)]
