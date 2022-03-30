@@ -26,21 +26,9 @@ fn main() {
 fn show_memory_stats(keys: &[String]) {
     println!("#keys: {}", keys.len());
     {
-        println!("[crawdad/trie/nomap]");
+        println!("[crawdad/trie]");
         let start = Instant::now();
-        let trie = crawdad::builder::nomap::Builder::new()
-            .from_keys(keys)
-            .release_trie();
-        let duration = start.elapsed();
-        print_memory("heap_bytes", trie.heap_bytes());
-        println!("num_elems: {}", trie.num_elems());
-        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
-        println!("constr_sec: {:.3}", duration.as_secs_f64());
-    }
-    {
-        println!("[crawdad/trie/freqmap]");
-        let start = Instant::now();
-        let trie = crawdad::builder::freqmap::Builder::new()
+        let trie = crawdad::builder::Builder::new()
             .from_keys(keys)
             .release_trie();
         let duration = start.elapsed();
