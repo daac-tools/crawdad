@@ -6,6 +6,7 @@ pub struct Trie {
 }
 
 impl Trie {
+    #[inline(always)]
     pub fn exact_match<K>(&self, key: K) -> Option<u32>
     where
         K: AsRef<str>,
@@ -39,6 +40,7 @@ impl Trie {
         }
     }
 
+    #[inline(always)]
     pub fn map_text<K>(&self, text: K, mapped: &mut Vec<u32>)
     where
         K: AsRef<str>,
