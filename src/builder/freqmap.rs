@@ -75,6 +75,8 @@ impl Builder {
         let max_value = get_max_value(&self.suffixes);
         let value_size = bytes::pack_size(max_value);
 
+        let mut suffix_memory = 0;
+
         for idx in 0..self.nodes.len() {
             // Empty?
             if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
@@ -118,8 +120,14 @@ impl Builder {
                 tails.push(suffix.key.len() as u8); // Len
                 bytes::pack_u32(&mut tails, hash, hash_size).unwrap();
                 bytes::pack_u32(&mut tails, suffix.val, value_size).unwrap();
+
+                suffix_memory += 1 + suffix.key.len() * 2 + value_size as usize;
             }
         }
+
+        let mpsize = self.nodes.len() * 8 + self.mapper.heap_bytes() + suffix_memory;
+        println!("MP-size: {}", mpsize);
+        println!("suffix_memory: {}", suffix_memory);
 
         RhTrie {
             nodes: self.nodes,
