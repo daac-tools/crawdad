@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 /// pack_size returns the smallest number of bytes that can encode `n`.
 #[inline(always)]
 pub fn pack_size(n: u32) -> u8 {
@@ -67,4 +69,39 @@ pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
     h ^= h >> 15;
 
     Some(h)
+}
+
+/// Returns (lcp, cmp) such that
+///  - lcp: Length of longest commom prefix of two strings.
+///  - cmp: if a < b then positive, elif b < a then negative, else zero.
+#[inline(always)]
+pub fn longest_common_prefix(a: &[u32], b: &[u32]) -> (usize, Ordering) {
+    let min_len = a.len().min(b.len());
+    for i in 0..min_len {
+        if a[i] != b[i] {
+            return (i, a[i].cmp(&b[i]));
+        }
+    }
+    (min_len, a.len().cmp(&b.len()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_longest_common_prefix() {
+        assert_eq!(
+            longest_common_prefix(&[1, 2], &[1, 2, 3]),
+            (2, Ordering::Less)
+        );
+        assert_eq!(
+            longest_common_prefix(&[1, 2], &[1, 2]),
+            (2, Ordering::Equal)
+        );
+        assert_eq!(
+            longest_common_prefix(&[1, 2, 3], &[1, 2]),
+            (2, Ordering::Greater)
+        );
+    }
 }

@@ -207,7 +207,9 @@ mod tests {
         let trie = Builder::new()
             .minimal_prefix()
             .from_keys(&keys)
-            .release_mpftrie();
+            .unwrap()
+            .release_mpftrie()
+            .unwrap();
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
@@ -222,7 +224,9 @@ mod tests {
         let trie = Builder::new()
             .minimal_prefix()
             .from_keys(&keys)
-            .release_mpftrie();
+            .unwrap()
+            .release_mpftrie()
+            .unwrap();
 
         let mut mapped = vec![];
         trie.map_text("国民が世界中で世直し", &mut mapped);

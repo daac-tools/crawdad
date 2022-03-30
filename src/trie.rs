@@ -164,7 +164,11 @@ mod tests {
     #[test]
     fn test_exact_match() {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
-        let trie = Builder::new().from_keys(&keys).release_trie();
+        let trie = Builder::new()
+            .from_keys(&keys)
+            .unwrap()
+            .release_trie()
+            .unwrap();
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
@@ -176,7 +180,11 @@ mod tests {
     #[test]
     fn test_common_prefix_search() {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
-        let trie = Builder::new().from_keys(&keys).release_trie();
+        let trie = Builder::new()
+            .from_keys(&keys)
+            .unwrap()
+            .release_trie()
+            .unwrap();
 
         let mut mapped = vec![];
         trie.map_text("国民が世界中で世直し", &mut mapped);

@@ -1,10 +1,9 @@
+use crate::errors::{CrawdadError, Result};
 use crate::mapper::CodeMapper;
-use crate::utils;
-use crate::MpTrie;
-use crate::MpfTrie;
-use crate::Node;
-use crate::Trie;
-use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
+use crate::{utils, MpTrie, MpfTrie, Node, Trie};
+use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
+
+use std::cmp::Ordering;
 
 use sucds::RsBitVector;
 
@@ -41,44 +40,59 @@ impl Builder {
         self
     }
 
-    pub fn from_keys<I, K>(mut self, keys: I) -> Self
+    pub fn from_keys<I, K>(self, keys: I) -> Result<Self>
     where
         I: IntoIterator<Item = K>,
         K: AsRef<str>,
     {
-        self.records = {
-            let mut records = vec![];
-            for key in keys {
-                records.push(Record {
-                    key: key.as_ref().chars().map(|c| c as u32).collect(),
-                    value: records.len() as u32,
-                });
-            }
-            records
-        };
+        self.from_records(keys.into_iter().enumerate().map(|(i, k)| (k, i as u32)))
+    }
 
-        self.mapper = CodeMapper::new(&make_freqs(&self.records));
+    pub fn from_records<I, K>(mut self, records: I) -> Result<Self>
+    where
+        I: IntoIterator<Item = (K, u32)>,
+        K: AsRef<str>,
+    {
+        self.records = records
+            .into_iter()
+            .map(|(k, v)| Record {
+                key: k.as_ref().chars().map(|c| c as u32).collect(),
+                value: v,
+            })
+            .collect();
+
+        for &Record { key: _, value } in &self.records {
+            if MAX_VALUE < value {
+                return Err(CrawdadError::scale("input value", MAX_VALUE));
+            }
+        }
+
+        self.mapper = CodeMapper::new(&make_freqs(&self.records)?);
         assert_eq!(self.mapper.get(END_MARKER).unwrap(), END_CODE);
 
-        make_prefix_free(&mut self.records);
+        make_prefix_free(&mut self.records)?;
 
         self.block_len = get_block_len(self.mapper.alphabet_size());
         self.init_array();
-        self.arrange_nodes(0, self.records.len(), 0, 0);
+        self.arrange_nodes(0, self.records.len(), 0, 0)?;
         self.finish();
-        self
+
+        Ok(self)
     }
 
-    pub fn release_trie(self) -> Trie {
-        assert!(self.suffixes.is_none());
-        Trie {
-            nodes: self.nodes,
-            mapper: self.mapper,
+    pub fn release_trie(self) -> Result<Trie> {
+        if self.suffixes.is_some() {
+            Err(CrawdadError::setup("minimal_prefix must be disabled."))
+        } else {
+            let Builder { nodes, mapper, .. } = self;
+            Ok(Trie { nodes, mapper })
         }
     }
 
-    pub fn release_mptrie(self) -> MpTrie {
-        assert!(self.suffixes.is_some());
+    pub fn release_mptrie(self) -> Result<MpTrie> {
+        if self.suffixes.is_none() {
+            return Err(CrawdadError::setup("minimal_prefix must be enabled."));
+        }
 
         let Builder {
             mapper,
@@ -104,7 +118,7 @@ impl Builder {
                 continue;
             }
 
-            assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
+            debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
             let parent_idx = nodes[node_idx].check as usize;
             let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
             let suffix = &suffixes[suf_idx];
@@ -129,17 +143,19 @@ impl Builder {
             utils::pack_u32(&mut tails, suffix.value, value_size);
         }
 
-        MpTrie {
+        Ok(MpTrie {
             mapper,
             nodes,
             tails,
             code_size,
             value_size,
-        }
+        })
     }
 
-    pub fn release_mpftrie(self) -> MpfTrie {
-        assert!(self.suffixes.is_some());
+    pub fn release_mpftrie(self) -> Result<MpfTrie> {
+        if self.suffixes.is_none() {
+            return Err(CrawdadError::setup("minimal_prefix must be enabled."));
+        }
 
         let Builder {
             mapper,
@@ -161,7 +177,7 @@ impl Builder {
                 continue;
             }
 
-            assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
+            debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
             let parent_idx = nodes[node_idx].check as usize;
             let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
             let suffix = &suffixes[suf_idx];
@@ -184,12 +200,12 @@ impl Builder {
             auxes.push((tail.len() as u8, tail_hash as u8));
         }
 
-        MpfTrie {
+        Ok(MpfTrie {
             mapper,
             nodes,
             ranks: RsBitVector::from_bits(ranks),
             auxes,
-        }
+        })
     }
 
     #[inline(always)]
@@ -218,8 +234,14 @@ impl Builder {
         self.fix_node(0);
     }
 
-    fn arrange_nodes(&mut self, spos: usize, epos: usize, depth: usize, node_idx: u32) {
-        assert!(self.is_fixed(node_idx));
+    fn arrange_nodes(
+        &mut self,
+        spos: usize,
+        epos: usize,
+        depth: usize,
+        node_idx: u32,
+    ) -> Result<()> {
+        debug_assert!(self.is_fixed(node_idx));
 
         if let Some(suffixes) = self.suffixes.as_mut() {
             if spos + 1 == epos {
@@ -229,37 +251,37 @@ impl Builder {
                     key: pop_end_marker(&self.records[spos].key[depth..]),
                     value: self.records[spos].value,
                 });
-                return;
+                return Ok(());
             }
         } else {
             if self.records[spos].key.len() == depth {
-                assert_eq!(spos + 1, epos);
-                assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
+                debug_assert_eq!(spos + 1, epos);
+                debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
                 // Sets IsLeaf = True
                 self.nodes[node_idx as usize].base = self.records[spos].value | !OFFSET_MASK;
                 // Note: HasLeaf must not be set here and should be set in finish()
                 // because MSB of check is used to indicate vacant element.
-                return;
+                return Ok(());
             }
         }
 
         self.fetch_labels(spos, epos, depth);
-        let base = self.define_nodes(node_idx);
+        let base = self.define_nodes(node_idx)?;
 
         let mut i1 = spos;
         let mut c1 = self.records[i1].key[depth];
         for i2 in spos + 1..epos {
             let c2 = self.records[i2].key[depth];
             if c1 != c2 {
-                assert!(c1 < c2);
+                debug_assert!(c1 < c2);
                 let child_idx = base ^ self.mapper.get(c1).unwrap();
-                self.arrange_nodes(i1, i2, depth + 1, child_idx);
+                self.arrange_nodes(i1, i2, depth + 1, child_idx)?;
                 i1 = i2;
                 c1 = c2;
             }
         }
         let child_idx = base ^ self.mapper.get(c1).unwrap();
-        self.arrange_nodes(i1, epos, depth + 1, child_idx);
+        self.arrange_nodes(i1, epos, depth + 1, child_idx)
     }
 
     fn finish(&mut self) {
@@ -277,17 +299,14 @@ impl Builder {
             }
         }
         for node_idx in 0..self.nodes.len() {
-            // Empty?
-            if self.nodes[node_idx].base == OFFSET_MASK && self.nodes[node_idx].check == OFFSET_MASK
-            {
+            if self.nodes[node_idx].is_vacant() {
                 continue;
             }
-            // Leaf?
-            if self.nodes[node_idx].base & !OFFSET_MASK != 0 {
+            if self.nodes[node_idx].is_leaf() {
                 continue;
             }
-            let em_idx = self.nodes[node_idx].base ^ END_CODE;
-            if self.nodes[em_idx as usize].check as usize == node_idx {
+            let end_idx = self.nodes[node_idx].base ^ END_CODE;
+            if self.nodes[end_idx as usize].check as usize == node_idx {
                 // Sets HasLeaf = True
                 self.nodes[node_idx].check |= !OFFSET_MASK;
             }
@@ -300,7 +319,7 @@ impl Builder {
         for i in spos + 1..epos {
             let c2 = self.records[i].key[depth];
             if c1 != c2 {
-                assert!(c1 < c2);
+                debug_assert!(c1 < c2);
                 self.labels.push(self.mapper.get(c1).unwrap());
                 c1 = c2;
             }
@@ -308,10 +327,10 @@ impl Builder {
         self.labels.push(self.mapper.get(c1).unwrap());
     }
 
-    fn define_nodes(&mut self, node_idx: u32) -> u32 {
+    fn define_nodes(&mut self, node_idx: u32) -> Result<u32> {
         let base = self.find_base(&self.labels);
         if base >= self.num_nodes() {
-            self.enlarge();
+            self.enlarge()?;
         }
 
         self.nodes[node_idx as usize].base = base;
@@ -320,12 +339,12 @@ impl Builder {
             self.fix_node(child_idx);
             self.nodes[child_idx as usize].check = node_idx;
         }
-        base
+        Ok(base)
     }
 
-    /// Finds a valid BASE value in a simple manner.
     fn find_base(&self, labels: &[u32]) -> u32 {
-        assert!(!labels.is_empty());
+        debug_assert!(!labels.is_empty());
+
         if self.head_idx == INVALID_IDX {
             return self.num_nodes() ^ labels[0];
         }
@@ -355,8 +374,9 @@ impl Builder {
         true
     }
 
+    #[inline(always)]
     fn fix_node(&mut self, node_idx: u32) {
-        assert!(!self.is_fixed(node_idx));
+        debug_assert!(!self.is_fixed(node_idx));
 
         let next = self.get_next(node_idx);
         let prev = self.get_prev(node_idx);
@@ -374,9 +394,13 @@ impl Builder {
         }
     }
 
-    fn enlarge(&mut self) {
+    fn enlarge(&mut self) -> Result<()> {
         let old_len = self.num_nodes();
         let new_len = old_len + self.block_len;
+
+        if OFFSET_MASK < new_len {
+            return Err(CrawdadError::scale("num_nodes", OFFSET_MASK));
+        }
 
         for i in old_len..new_len {
             self.nodes.push(Node::default());
@@ -396,6 +420,8 @@ impl Builder {
             self.set_next(new_len - 1, head_idx);
             self.set_prev(head_idx, new_len - 1);
         }
+
+        Ok(())
     }
 
     // If the most significant bit is unset, the state is fixed.
@@ -407,67 +433,37 @@ impl Builder {
     // Unset the most significant bit.
     #[inline(always)]
     fn set_fixed(&mut self, i: u32) {
-        assert!(!self.is_fixed(i));
+        debug_assert!(!self.is_fixed(i));
         self.nodes[i as usize].base = INVALID_IDX;
         self.nodes[i as usize].check &= OFFSET_MASK;
     }
 
     #[inline(always)]
     fn get_next(&self, i: u32) -> u32 {
-        assert_ne!(self.nodes[i as usize].base & !OFFSET_MASK, 0, "i={}", i);
+        debug_assert_ne!(self.nodes[i as usize].base & !OFFSET_MASK, 0);
         self.nodes[i as usize].base & OFFSET_MASK
     }
 
     #[inline(always)]
     fn get_prev(&self, i: u32) -> u32 {
-        assert_ne!(self.nodes[i as usize].check & !OFFSET_MASK, 0, "i={}", i);
+        debug_assert_ne!(self.nodes[i as usize].check & !OFFSET_MASK, 0);
         self.nodes[i as usize].check & OFFSET_MASK
     }
 
     #[inline(always)]
     fn set_next(&mut self, i: u32, x: u32) {
-        assert_eq!(x & !OFFSET_MASK, 0);
+        debug_assert_eq!(x & !OFFSET_MASK, 0);
         self.nodes[i as usize].base = x | !OFFSET_MASK
     }
 
     #[inline(always)]
     fn set_prev(&mut self, i: u32, x: u32) {
-        assert_eq!(x & !OFFSET_MASK, 0);
+        debug_assert_eq!(x & !OFFSET_MASK, 0);
         self.nodes[i as usize].check = x | !OFFSET_MASK
     }
 }
 
-fn make_prefix_free(records: &mut [Record]) {
-    for i in 1..records.len() {
-        if startswith(&records[i - 1].key, &records[i].key) {
-            records[i - 1].key.push(END_MARKER);
-        }
-    }
-}
-
-fn startswith(a: &[u32], b: &[u32]) -> bool {
-    if b.len() < a.len() {
-        return false;
-    }
-    for i in 0..a.len() {
-        if a[i] != b[i] {
-            return false;
-        }
-    }
-    true
-}
-
-fn pop_end_marker(x: &[u32]) -> Vec<u32> {
-    let mut x = x.to_vec();
-    if let Some(&c) = x.last() {
-        if c == END_MARKER {
-            x.pop();
-        }
-    }
-    x
-}
-
-fn make_freqs(records: &[Record]) -> Vec<u32> {
+fn make_freqs(records: &[Record]) -> Result<Vec<u32>> {
     let mut freqs = vec![];
     for rec in records {
         for &c in &rec.key {
@@ -478,9 +474,53 @@ fn make_freqs(records: &[Record]) -> Vec<u32> {
             freqs[c] += 1;
         }
     }
-    assert_eq!(freqs[END_MARKER as usize], 0);
-    freqs[END_MARKER as usize] += u32::MAX;
-    freqs
+    if freqs[END_MARKER as usize] != 0 {
+        Err(CrawdadError::input("END_MARKER must not be contained."))
+    } else {
+        freqs[END_MARKER as usize] = u32::MAX;
+        Ok(freqs)
+    }
+}
+
+fn make_prefix_free(records: &mut [Record]) -> Result<()> {
+    if records.is_empty() {
+        return Err(CrawdadError::input("records must not be empty."));
+    }
+    if records[0].key.is_empty() {
+        return Err(CrawdadError::input(
+            "records must not contain an empty key.",
+        ));
+    }
+    for i in 1..records.len() {
+        let (lcp, cmp) = utils::longest_common_prefix(&records[i - 1].key, &records[i].key);
+        match cmp {
+            Ordering::Less => {
+                // Startswith?
+                if lcp == records[i - 1].key.len() {
+                    records[i - 1].key.push(END_MARKER);
+                }
+            }
+            Ordering::Equal => {
+                return Err(CrawdadError::input(
+                    "records must not contain duplicated keys.",
+                ));
+            }
+            Ordering::Greater => {
+                return Err(CrawdadError::input("records must be sorted."));
+            }
+        }
+    }
+    Ok(())
+}
+
+fn pop_end_marker(x: &[u32]) -> Vec<u32> {
+    let mut x = x.to_vec();
+    if let Some(&c) = x.last() {
+        if c == END_MARKER {
+            x.pop();
+        }
+    }
+    x
 }
 
 const fn get_block_len(alphabet_size: u32) -> u32 {
