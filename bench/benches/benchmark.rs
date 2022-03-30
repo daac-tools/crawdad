@@ -84,6 +84,22 @@ fn add_exact_match_benches(
         });
     });
 
+    group.bench_function("crawdad/mptrie", |b| {
+        let trie = crawdad::builder::Builder::new()
+            .minimal_prefix()
+            .from_keys(keys)
+            .release_mptrie();
+        b.iter(|| {
+            let mut sum = 0;
+            for query in queries {
+                sum += trie.exact_match(query).unwrap();
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
     group.bench_function("yada", |b| {
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys

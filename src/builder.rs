@@ -1,6 +1,8 @@
 use crate::mapper::CodeMapper;
-use crate::trie::Trie;
+use crate::utils;
+use crate::MpTrie;
 use crate::Node;
+use crate::Trie;
 
 use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
 
@@ -125,6 +127,67 @@ impl Builder {
         Trie {
             nodes: self.nodes,
             mapper: self.mapper,
+        }
+    }
+
+    pub fn release_mptrie(self) -> MpTrie {
+        assert!(self.suffixes.is_some());
+
+        let Builder {
+            mapper,
+            mut nodes,
+            suffixes,
+            ..
+        } = self;
+
+        let mut tails = vec![];
+        let suffixes = suffixes.unwrap();
+
+        let max_code = (mapper.alphabet_size() - 1) as u32;
+        let code_size = utils::pack_size(max_code);
+
+        let max_value = suffixes.iter().map(|s| s.val).max().unwrap();
+        let value_size = utils::pack_size(max_value);
+
+        for idx in 0..nodes.len() {
+            if nodes[idx].is_vacant() {
+                continue;
+            }
+            if !nodes[idx].is_leaf() {
+                continue;
+            }
+
+            assert_eq!(nodes[idx].check & !OFFSET_MASK, 0);
+            let parent_idx = nodes[idx].check as usize;
+            let suf_idx = (nodes[idx].base & OFFSET_MASK) as usize;
+            let suffix = &suffixes[suf_idx];
+
+            // HasLeaf?
+            if nodes[parent_idx].has_leaf() {
+                // `idx` is indicated from `parent_idx` with END_CODE?
+                if nodes[parent_idx].base == idx as u32 {
+                    assert!(suffix.key.is_empty());
+                    nodes[idx].base = suffix.val | !OFFSET_MASK;
+                    continue;
+                }
+            }
+
+            nodes[idx].base = tails.len() as u32 | !OFFSET_MASK;
+            tails.push(suffix.key.len() as u8);
+            suffix
+                .key
+                .iter()
+                .map(|&c| mapper.get(c).unwrap())
+                .for_each(|c| utils::pack_u32(&mut tails, c, code_size).unwrap());
+            utils::pack_u32(&mut tails, suffix.val, value_size).unwrap();
+        }
+
+        MpTrie {
+            mapper,
+            nodes,
+            tails,
+            code_size,
+            value_size,
         }
     }
 
