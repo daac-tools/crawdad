@@ -51,6 +51,19 @@ fn show_memory_stats(keys: &[String]) {
         println!("constr_sec: {:.3}", duration.as_secs_f64());
     }
     {
+        println!("[crawdad/mpftrie]");
+        let start = Instant::now();
+        let trie = crawdad::builder::Builder::new()
+            .minimal_prefix()
+            .from_keys(keys)
+            .release_mpftrie();
+        let duration = start.elapsed();
+        print_memory("heap_bytes", trie.heap_bytes());
+        println!("num_elems: {}", trie.num_elems());
+        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
+        println!("constr_sec: {:.3}", duration.as_secs_f64());
+    }
+    {
         println!("[yada]");
         let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(

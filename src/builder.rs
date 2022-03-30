@@ -1,8 +1,11 @@
 use crate::mapper::CodeMapper;
 use crate::utils;
 use crate::MpTrie;
+use crate::MpfTrie;
 use crate::Node;
 use crate::Trie;
+
+use sucds::RsBitVector;
 
 use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
 
@@ -188,6 +191,60 @@ impl Builder {
             tails,
             code_size,
             value_size,
+        }
+    }
+
+    pub fn release_mpftrie(self) -> MpfTrie {
+        assert!(self.suffixes.is_some());
+
+        let Builder {
+            mapper,
+            mut nodes,
+            suffixes,
+            ..
+        } = self;
+
+        let mut ranks = vec![false; nodes.len()];
+        let mut auxes = vec![];
+
+        let suffixes = suffixes.unwrap();
+
+        for idx in 0..nodes.len() {
+            if nodes[idx].is_vacant() {
+                continue;
+            }
+            if !nodes[idx].is_leaf() {
+                continue;
+            }
+
+            assert_eq!(nodes[idx].check & !OFFSET_MASK, 0);
+            let parent_idx = nodes[idx].check as usize;
+            let suf_idx = (nodes[idx].base & OFFSET_MASK) as usize;
+            let suffix = &suffixes[suf_idx];
+
+            // HasLeaf?
+            if nodes[parent_idx].has_leaf() {
+                // `idx` is indicated from `parent_idx` with END_CODE?
+                if nodes[parent_idx].base == idx as u32 {
+                    assert!(suffix.key.is_empty());
+                    nodes[idx].base = suffix.val | !OFFSET_MASK;
+                    continue;
+                }
+            }
+
+            nodes[idx].base = suffix.val | !OFFSET_MASK;
+            ranks[idx] = true;
+
+            let tail: Vec<_> = suffix.key.iter().map(|&c| mapper.get(c)).collect();
+            let tail_hash = utils::murmur_hash2(&tail).unwrap();
+            auxes.push((tail.len() as u8, tail_hash as u8));
+        }
+
+        MpfTrie {
+            mapper,
+            nodes,
+            ranks: RsBitVector::from_bits(ranks),
+            auxes,
         }
     }
 

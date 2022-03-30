@@ -100,6 +100,22 @@ fn add_exact_match_benches(
         });
     });
 
+    group.bench_function("crawdad/mpftrie", |b| {
+        let trie = crawdad::builder::Builder::new()
+            .minimal_prefix()
+            .from_keys(keys)
+            .release_mpftrie();
+        b.iter(|| {
+            let mut sum = 0;
+            for query in queries {
+                sum += trie.exact_match(query).unwrap();
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
     group.bench_function("yada", |b| {
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys
@@ -128,6 +144,50 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
         let trie = crawdad::builder::Builder::new()
             .from_keys(keys)
             .release_trie();
+        let mut mapped = Vec::with_capacity(256);
+        b.iter(|| {
+            let mut sum = 0;
+            for text in texts {
+                trie.map_text(text, &mut mapped);
+                for i in 0..mapped.len() {
+                    for (val, len) in trie.common_prefix_searcher(&mapped[i..]) {
+                        sum += i + len + val as usize;
+                    }
+                }
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
+    group.bench_function("crawdad/mptrie", |b| {
+        let trie = crawdad::builder::Builder::new()
+            .minimal_prefix()
+            .from_keys(keys)
+            .release_mptrie();
+        let mut mapped = Vec::with_capacity(256);
+        b.iter(|| {
+            let mut sum = 0;
+            for text in texts {
+                trie.map_text(text, &mut mapped);
+                for i in 0..mapped.len() {
+                    for (val, len) in trie.common_prefix_searcher(&mapped[i..]) {
+                        sum += i + len + val as usize;
+                    }
+                }
+            }
+            if sum == 0 {
+                panic!();
+            }
+        });
+    });
+
+    group.bench_function("crawdad/mpftrie", |b| {
+        let trie = crawdad::builder::Builder::new()
+            .minimal_prefix()
+            .from_keys(keys)
+            .release_mpftrie();
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;

@@ -1,5 +1,6 @@
 pub mod builder;
 mod mapper;
+pub mod mpftrie;
 pub mod mptrie;
 pub mod trie;
 mod utils;
@@ -9,6 +10,7 @@ pub const INVALID_IDX: u32 = 0xffff_ffff;
 pub const END_MARKER: u32 = 0;
 pub const END_CODE: u32 = 0;
 
+pub use mpftrie::MpfTrie;
 pub use mptrie::MpTrie;
 pub use trie::Trie;
 
