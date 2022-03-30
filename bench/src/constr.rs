@@ -30,9 +30,7 @@ fn show_memory_stats(keys: &[String]) {
     {
         println!("[crawdad/trie]");
         let start = Instant::now();
-        let trie = crawdad::builder::Builder::new()
-            .from_keys(keys)
-            .release_trie();
+        let trie = crawdad::Trie::from_keys(keys).unwrap();
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
         println!("num_elems: {}", trie.num_elems());
@@ -42,10 +40,7 @@ fn show_memory_stats(keys: &[String]) {
     {
         println!("[crawdad/mptrie]");
         let start = Instant::now();
-        let trie = crawdad::builder::Builder::new()
-            .minimal_prefix()
-            .from_keys(keys)
-            .release_mptrie();
+        let trie = crawdad::MpTrie::from_keys(keys).unwrap();
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
         println!("num_elems: {}", trie.num_elems());
@@ -55,10 +50,7 @@ fn show_memory_stats(keys: &[String]) {
     {
         println!("[crawdad/mpftrie]");
         let start = Instant::now();
-        let trie = crawdad::builder::Builder::new()
-            .minimal_prefix()
-            .from_keys(keys)
-            .release_mpftrie();
+        let trie = crawdad::MpfTrie::from_keys(keys).unwrap();
         let duration = start.elapsed();
         print_memory("heap_bytes", trie.heap_bytes());
         println!("num_elems: {}", trie.num_elems());
