@@ -29,7 +29,7 @@ impl Trie {
         if self.is_leaf(node_idx) {
             Some(self.get_value(node_idx))
         } else if self.has_leaf(node_idx) {
-            Some(self.get_value(self.get_leaf(node_idx)))
+            Some(self.get_value(self.get_leaf_idx(node_idx)))
         } else {
             None
         }
@@ -92,7 +92,7 @@ impl Trie {
     }
 
     #[inline(always)]
-    fn get_leaf(&self, node_idx: u32) -> u32 {
+    fn get_leaf_idx(&self, node_idx: u32) -> u32 {
         let leaf_idx = self.get_base(node_idx) ^ END_CODE;
         debug_assert_eq!(self.get_check(leaf_idx), node_idx);
         leaf_idx
@@ -149,7 +149,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
                 self.text_pos = self.text.len();
                 return Some((self.trie.get_value(self.node_idx), matched_pos));
             } else if self.trie.has_leaf(self.node_idx) {
-                let leaf_idx = self.trie.get_leaf(self.node_idx);
+                let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some((self.trie.get_value(leaf_idx), self.text_pos));
             }
         }
