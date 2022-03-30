@@ -70,9 +70,7 @@ fn add_exact_match_benches(
     queries: &[String],
 ) {
     group.bench_function("crawdad/trie", |b| {
-        let trie = crawdad::builder::Builder::new()
-            .from_keys(keys)
-            .release_trie();
+        let trie = crawdad::Trie::from_keys(keys).unwrap();
         b.iter(|| {
             let mut sum = 0;
             for query in queries {
@@ -85,10 +83,7 @@ fn add_exact_match_benches(
     });
 
     group.bench_function("crawdad/mptrie", |b| {
-        let trie = crawdad::builder::Builder::new()
-            .minimal_prefix()
-            .from_keys(keys)
-            .release_mptrie();
+        let trie = crawdad::MpTrie::from_keys(keys).unwrap();
         b.iter(|| {
             let mut sum = 0;
             for query in queries {
@@ -101,10 +96,7 @@ fn add_exact_match_benches(
     });
 
     group.bench_function("crawdad/mpftrie", |b| {
-        let trie = crawdad::builder::Builder::new()
-            .minimal_prefix()
-            .from_keys(keys)
-            .release_mpftrie();
+        let trie = crawdad::MpfTrie::from_keys(keys).unwrap();
         b.iter(|| {
             let mut sum = 0;
             for query in queries {
@@ -141,9 +133,7 @@ fn add_exact_match_benches(
 
 fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts: &[String]) {
     group.bench_function("crawdad/trie", |b| {
-        let trie = crawdad::builder::Builder::new()
-            .from_keys(keys)
-            .release_trie();
+        let trie = crawdad::Trie::from_keys(keys).unwrap();
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;
@@ -162,10 +152,7 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
     });
 
     group.bench_function("crawdad/mptrie", |b| {
-        let trie = crawdad::builder::Builder::new()
-            .minimal_prefix()
-            .from_keys(keys)
-            .release_mptrie();
+        let trie = crawdad::MpTrie::from_keys(keys).unwrap();
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;
@@ -184,10 +171,7 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
     });
 
     group.bench_function("crawdad/mpftrie", |b| {
-        let trie = crawdad::builder::Builder::new()
-            .minimal_prefix()
-            .from_keys(keys)
-            .release_mpftrie();
+        let trie = crawdad::MpfTrie::from_keys(keys).unwrap();
         let mut mapped = Vec::with_capacity(256);
         b.iter(|| {
             let mut sum = 0;
