@@ -35,21 +35,12 @@ fn startswith(a: &[u32], b: &[u32]) -> bool {
     true
 }
 
-fn pop_end_marker(mut x: Vec<u32>) -> Vec<u32> {
+fn pop_end_marker(x: &[u32]) -> Vec<u32> {
+    let mut x = x.to_vec();
     if let Some(&c) = x.last() {
         if c == END_MARKER {
             x.pop();
         }
     }
     x
-}
-
-fn get_max_value(suffixes: &[Vec<Suffix>]) -> u32 {
-    let mut max_val = 0;
-    for sufs in suffixes {
-        for suf in sufs {
-            max_val = max_val.max(suf.val);
-        }
-    }
-    max_val
 }

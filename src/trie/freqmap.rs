@@ -4,8 +4,8 @@ use crate::Node;
 use crate::END_CODE;
 
 pub struct Trie {
-    pub(crate) nodes: Vec<Node>,
     pub(crate) mapper: CodeMapper,
+    pub(crate) nodes: Vec<Node>,
 }
 
 impl Trie {

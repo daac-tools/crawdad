@@ -1,8 +1,5 @@
-use super::{get_max_value, make_prefix_free, pop_end_marker, Record, Suffix};
-use crate::bytes;
-use crate::hasher::RollingHasher;
+use super::{make_prefix_free, pop_end_marker, Record, Suffix};
 use crate::mapper::CodeMapper;
-use crate::rhtrie::freqmap::RhTrie;
 use crate::trie::freqmap::Trie;
 use crate::Node;
 
@@ -11,11 +8,10 @@ use crate::{END_CODE, END_MARKER, INVALID_IDX, OFFSET_MASK};
 #[derive(Default)]
 pub struct Builder {
     records: Vec<Record>,
-    nodes: Vec<Node>,
-    suffixes: Vec<Vec<Suffix>>,
     mapper: CodeMapper,
+    nodes: Vec<Node>,
+    suffixes: Option<Vec<Suffix>>,
     labels: Vec<u32>,
-    suffix_thr: u8,
     head_idx: u32,
     block_len: u32,
 }
@@ -25,8 +21,8 @@ impl Builder {
         Self::default()
     }
 
-    pub fn set_suffix_thr(mut self, suffix_thr: u8) -> Self {
-        self.suffix_thr = suffix_thr;
+    pub fn minimal_prefix(mut self) -> Self {
+        self.suffixes = Some(vec![]);
         self
     }
 
@@ -59,83 +55,10 @@ impl Builder {
     }
 
     pub fn release_trie(self) -> Trie {
+        assert!(self.suffixes.is_none());
         Trie {
             nodes: self.nodes,
             mapper: self.mapper,
-        }
-    }
-
-    pub fn release_rhtrie(mut self, hash_size: u8) -> RhTrie {
-        assert_ne!(self.suffix_thr, 0);
-
-        let mut tails = vec![];
-        let mut mapped_suffix = vec![];
-        let hash_mask = ((1u64 << hash_size * 8) - 1) as u32;
-
-        let max_value = get_max_value(&self.suffixes);
-        let value_size = bytes::pack_size(max_value);
-
-        let mut suffix_memory = 0;
-
-        for idx in 0..self.nodes.len() {
-            // Empty?
-            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
-                continue;
-            }
-            // Not Leaf?
-            if self.nodes[idx].base & !OFFSET_MASK == 0 {
-                continue;
-            }
-
-            assert_eq!(self.nodes[idx].check & !OFFSET_MASK, 0);
-            let parent_idx = self.nodes[idx].check as usize;
-
-            // HasLeaf?
-            if self.nodes[parent_idx].check & !OFFSET_MASK != 0 {
-                // `idx` is indicated from `parent_idx` with END_CODE?
-                if self.nodes[parent_idx].base == idx as u32 {
-                    let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
-                    assert_eq!(self.suffixes[suffix_idx].len(), 1);
-                    let suffix = &self.suffixes[suffix_idx][0];
-                    assert!(suffix.key.is_empty());
-                    self.nodes[idx].base = suffix.val | !OFFSET_MASK;
-                    continue;
-                }
-            }
-
-            let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
-            self.nodes[idx].base = tails.len() as u32 | !OFFSET_MASK;
-
-            let suffixes = &self.suffixes[suffix_idx];
-            assert!(1 <= suffixes.len() && suffixes.len() < 256);
-
-            tails.push(suffixes.len() as u8); // # of suffixes
-            for suffix in suffixes {
-                mapped_suffix.clear();
-                suffix
-                    .key
-                    .iter()
-                    .for_each(|&c| mapped_suffix.push(self.mapper.get(c)));
-                let hash = RollingHasher::hash_with_option(&mapped_suffix).unwrap() & hash_mask;
-                tails.push(suffix.key.len() as u8); // Len
-                bytes::pack_u32(&mut tails, hash, hash_size).unwrap();
-                bytes::pack_u32(&mut tails, suffix.val, value_size).unwrap();
-
-                suffix_memory += 1 + suffix.key.len() * 2 + value_size as usize;
-            }
-        }
-
-        let mpsize = self.nodes.len() * 8 + self.mapper.heap_bytes() + suffix_memory;
-        println!("MP-size: {}", mpsize);
-        println!("suffix_memory: {}", suffix_memory);
-
-        RhTrie {
-            nodes: self.nodes,
-            mapper: self.mapper,
-            tails,
-            hash_mask,
-            hash_size,
-            value_size,
         }
     }
 
@@ -193,7 +116,17 @@ impl Builder {
     fn arrange_nodes(&mut self, spos: usize, epos: usize, depth: usize, idx: u32) {
         assert!(self.is_fixed(idx));
 
-        if self.suffix_thr == 0 {
+        if let Some(suffixes) = self.suffixes.as_mut() {
+            if spos + 1 == epos {
+                let suffix_idx = suffixes.len() as u32;
+                self.nodes[idx as usize].base = suffix_idx | !OFFSET_MASK;
+                suffixes.push(Suffix {
+                    key: pop_end_marker(&self.records[spos].key[depth..]),
+                    val: self.records[spos].val,
+                });
+                return;
+            }
+        } else {
             if self.records[spos].key.len() == depth {
                 assert_eq!(spos + 1, epos);
                 assert_eq!(self.records[spos].val & !OFFSET_MASK, 0);
@@ -201,20 +134,6 @@ impl Builder {
                 self.nodes[idx as usize].base = self.records[spos].val | !OFFSET_MASK;
                 // Note: HasLeaf must not be set here and should be set in finish()
                 // because MSB of check is used to indicate vacant element.
-                return;
-            }
-        } else {
-            if epos - spos <= self.suffix_thr as usize {
-                let mut suffixes = vec![];
-                for i in spos..epos {
-                    suffixes.push(Suffix {
-                        key: pop_end_marker(self.records[i].key[depth..].to_vec()),
-                        val: self.records[i].val,
-                    });
-                }
-                let suffix_idx = self.suffixes.len() as u32;
-                self.nodes[idx as usize].base = suffix_idx | !OFFSET_MASK;
-                self.suffixes.push(suffixes);
                 return;
             }
         }

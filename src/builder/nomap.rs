@@ -1,8 +1,4 @@
-use super::{get_max_value, make_prefix_free, pop_end_marker, Record, Suffix};
-use crate::bytes;
-use crate::embed_trie::{nomap::EmbedTrie, EmbedSuffix};
-use crate::hasher::RollingHasher;
-use crate::rhtrie::nomap::RhTrie;
+use super::{make_prefix_free, pop_end_marker, Record, Suffix};
 use crate::trie::nomap::Trie;
 use crate::Node;
 
@@ -12,9 +8,8 @@ use crate::{END_MARKER, INVALID_IDX, OFFSET_MASK};
 pub struct Builder {
     records: Vec<Record>,
     nodes: Vec<Node>,
-    suffixes: Vec<Vec<Suffix>>,
+    suffixes: Option<Vec<Suffix>>,
     labels: Vec<i32>,
-    suffix_thr: u8,
     max_code: i32,
     head_idx: u32,
 }
@@ -24,8 +19,8 @@ impl Builder {
         Self::default()
     }
 
-    pub fn set_suffix_thr(mut self, suffix_thr: u8) -> Self {
-        self.suffix_thr = suffix_thr;
+    pub fn minimal_prefix(mut self) -> Self {
+        self.suffixes = Some(vec![]);
         self
     }
 
@@ -65,129 +60,8 @@ impl Builder {
     }
 
     pub fn release_trie(self) -> Trie {
-        assert_eq!(self.suffix_thr, 0);
+        assert!(self.suffixes.is_none());
         Trie {
-            nodes: self.nodes,
-            max_code: self.max_code,
-        }
-    }
-
-    pub fn release_rhtrie(mut self, hash_size: u8) -> RhTrie {
-        assert_ne!(self.suffix_thr, 0);
-
-        let mut tails = vec![];
-        let hash_mask = ((1u64 << hash_size * 8) - 1) as u32;
-
-        let max_value = get_max_value(&self.suffixes);
-        let value_size = bytes::pack_size(max_value);
-
-        for idx in 0..self.nodes.len() {
-            // Empty?
-            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
-                continue;
-            }
-            // Not Leaf?
-            if self.nodes[idx].base & !OFFSET_MASK == 0 {
-                continue;
-            }
-
-            assert_eq!(self.nodes[idx].check & !OFFSET_MASK, 0);
-            let parent_idx = self.nodes[idx].check as usize;
-
-            // HasLeaf?
-            if self.nodes[parent_idx].check & !OFFSET_MASK != 0 {
-                // `idx` is indicated from `parent_idx` with END_CODE?
-                if self.nodes[parent_idx].base == idx as u32 + self.max_code as u32 {
-                    let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
-                    assert_eq!(self.suffixes[suffix_idx].len(), 1);
-                    let suffix = &self.suffixes[suffix_idx][0];
-                    assert!(suffix.key.is_empty());
-                    self.nodes[idx].base = suffix.val | !OFFSET_MASK;
-                    continue;
-                }
-            }
-
-            let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
-            self.nodes[idx].base = tails.len() as u32 | !OFFSET_MASK;
-
-            let suffixes = &self.suffixes[suffix_idx];
-            assert!(1 <= suffixes.len() && suffixes.len() < 256);
-
-            tails.push(suffixes.len() as u8); // # of suffixes
-            for suffix in suffixes {
-                let hash = RollingHasher::hash(&suffix.key) & hash_mask;
-                tails.push(suffix.key.len() as u8); // Len
-                bytes::pack_u32(&mut tails, hash, hash_size).unwrap();
-                bytes::pack_u32(&mut tails, suffix.val, value_size).unwrap();
-            }
-        }
-
-        RhTrie {
-            nodes: self.nodes,
-            tails,
-            hash_mask,
-            hash_size,
-            value_size,
-            max_code: self.max_code,
-        }
-    }
-
-    pub fn release_embed_trie(mut self) -> EmbedTrie {
-        assert_eq!(self.suffix_thr, 1);
-
-        let mut vacant_idx = vec![];
-        let mut embed_idx = vec![];
-
-        for idx in 0..self.nodes.len() {
-            // Empty?
-            if self.nodes[idx].base == OFFSET_MASK && self.nodes[idx].check == OFFSET_MASK {
-                vacant_idx.push(idx);
-                continue;
-            }
-            // Not Leaf?
-            if self.nodes[idx].base & !OFFSET_MASK == 0 {
-                continue;
-            }
-
-            assert_eq!(self.nodes[idx].check & !OFFSET_MASK, 0);
-            let parent_idx = self.nodes[idx].check as usize;
-
-            // HasLeaf?
-            if self.nodes[parent_idx].check & !OFFSET_MASK != 0 {
-                // `idx` is indicated from `parent_idx` with END_CODE?
-                if self.nodes[parent_idx].base == idx as u32 + self.max_code as u32 {
-                    let suffix_idx = (self.nodes[idx].base & OFFSET_MASK) as usize;
-                    assert_eq!(self.suffixes[suffix_idx].len(), 1);
-                    let suffix = &self.suffixes[suffix_idx][0];
-                    assert!(suffix.key.is_empty());
-                    self.nodes[idx].base = suffix.val | !OFFSET_MASK;
-                    continue;
-                }
-            }
-
-            embed_idx.push(idx);
-        }
-
-        let mut vct_iter = vacant_idx.iter();
-        for emb_idx in embed_idx {
-            let vct_idx = if let Some(&vct_idx) = vct_iter.next() {
-                vct_idx
-            } else {
-                let vct_idx = self.nodes.len();
-                self.nodes.push(Node::default());
-                vct_idx
-            };
-
-            let suf_idx = (self.nodes[emb_idx].base & OFFSET_MASK) as usize;
-            self.nodes[emb_idx].base = vct_idx as u32 | !OFFSET_MASK;
-
-            assert_eq!(self.suffixes[suf_idx].len(), 1);
-            let suffix = &self.suffixes[suf_idx][0];
-
-            self.nodes[vct_idx] = EmbedSuffix::from_suffix(&suffix.key, suffix.val);
-        }
-
-        EmbedTrie {
             nodes: self.nodes,
             max_code: self.max_code,
         }
@@ -224,7 +98,17 @@ impl Builder {
     fn arrange_nodes(&mut self, spos: usize, epos: usize, depth: usize, idx: u32) {
         assert!(self.is_fixed(idx));
 
-        if self.suffix_thr == 0 {
+        if let Some(suffixes) = self.suffixes.as_mut() {
+            if spos + 1 == epos {
+                let suffix_idx = suffixes.len() as u32;
+                self.nodes[idx as usize].base = suffix_idx | !OFFSET_MASK;
+                suffixes.push(Suffix {
+                    key: pop_end_marker(&self.records[spos].key[depth..]),
+                    val: self.records[spos].val,
+                });
+                return;
+            }
+        } else {
             if self.records[spos].key.len() == depth {
                 assert_eq!(spos + 1, epos);
                 assert_eq!(self.records[spos].val & !OFFSET_MASK, 0);
@@ -232,20 +116,6 @@ impl Builder {
                 self.nodes[idx as usize].base = self.records[spos].val | !OFFSET_MASK;
                 // Note: HasLeaf must not be set here and should be set in finish()
                 // because MSB of check is used to indicate vacant element.
-                return;
-            }
-        } else {
-            if epos - spos <= self.suffix_thr as usize {
-                let mut suffixes = vec![];
-                for i in spos..epos {
-                    suffixes.push(Suffix {
-                        key: pop_end_marker(self.records[i].key[depth..].to_vec()),
-                        val: self.records[i].val,
-                    });
-                }
-                let suffix_idx = self.suffixes.len() as u32;
-                self.nodes[idx as usize].base = suffix_idx | !OFFSET_MASK;
-                self.suffixes.push(suffixes);
                 return;
             }
         }
@@ -452,133 +322,4 @@ impl Builder {
         assert_eq!(x & !OFFSET_MASK, 0);
         self.nodes[i as usize].check = x | !OFFSET_MASK
     }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn to_codes(k: &str) -> Vec<u32> {
-        k.chars().map(|c| c as u32).collect()
-    }
-
-    #[test]
-    fn test_suffix_thr_1() {
-        let keys = vec!["ab", "abc", "adaab", "bbc"];
-        let b = Builder::new().set_suffix_thr(1).from_keys(&keys);
-        assert_eq!(b.max_code, 100);
-        assert_eq!(
-            b.suffixes[0],
-            vec![Suffix {
-                key: vec![],
-                val: 0
-            }]
-        );
-        assert_eq!(
-            b.suffixes[1],
-            vec![Suffix {
-                key: vec![],
-                val: 1
-            }]
-        );
-        assert_eq!(
-            b.suffixes[2],
-            vec![Suffix {
-                key: to_codes("aab"),
-                val: 2
-            }]
-        );
-        assert_eq!(
-            b.suffixes[3],
-            vec![Suffix {
-                key: to_codes("bc"),
-                val: 3
-            }]
-        );
-    }
-
-    #[test]
-    fn test_suffix_thr_2() {
-        let keys = vec!["ab", "abc", "adaab", "bbc"];
-        let b = Builder::new().set_suffix_thr(2).from_keys(&keys);
-        assert_eq!(b.max_code, 100);
-        assert_eq!(
-            b.suffixes[0],
-            vec![
-                Suffix {
-                    key: vec![],
-                    val: 0
-                },
-                Suffix {
-                    key: to_codes("c"),
-                    val: 1
-                }
-            ]
-        );
-        assert_eq!(
-            b.suffixes[1],
-            vec![Suffix {
-                key: to_codes("aab"),
-                val: 2
-            }]
-        );
-        assert_eq!(
-            b.suffixes[2],
-            vec![Suffix {
-                key: to_codes("bc"),
-                val: 3
-            }]
-        );
-    }
-
-    // #[test]
-    // fn test_mptrie_tails() {
-    //     let keys = vec!["ab", "abc", "adaab", "bbc"];
-    //     let trie = Builder::new()
-    //         .set_suffix_thr(1)
-    //         .from_keys(&keys)
-    //         .release_mptrie();
-    //     assert_eq!(
-    //         trie.tails,
-    //         vec![
-    //             2, 'b' as u32, 'c' as u32, 3, //
-    //             3, 'a' as u32, 'a' as u32, 'b' as u32, 2, //
-    //             0, 1
-    //         ]
-    //     );
-    // }
-
-    // #[test]
-    // fn test_rhtrie_tails_1() {
-    //     let keys = vec!["ab", "abc", "adaab", "bbc"];
-    //     let trie = Builder::new()
-    //         .set_suffix_thr(1)
-    //         .from_keys(&keys)
-    //         .release_rhtrie();
-    //     assert_eq!(
-    //         trie.tails,
-    //         vec![
-    //             1, 2, 42, 3, //
-    //             1, 3, 42, 2, //
-    //             1, 0, 42, 1
-    //         ]
-    //     );
-    // }
-
-    // #[test]
-    // fn test_rhtrie_tails_2() {
-    //     let keys = vec!["ab", "abc", "adaab", "bbc"];
-    //     let trie = Builder::new()
-    //         .set_suffix_thr(2)
-    //         .from_keys(&keys)
-    //         .release_rhtrie();
-    //     assert_eq!(
-    //         trie.tails,
-    //         vec![
-    //             1, 2, 42, 3, //
-    //             2, 0, 42, 0, 1, 42, 1, //
-    //             1, 3, 42, 2, //
-    //         ]
-    //     );
-    // }
 }

@@ -1,9 +1,5 @@
 pub mod builder;
-mod bytes;
-pub mod embed_trie;
-pub mod hasher;
 mod mapper;
-pub mod rhtrie;
 pub mod trie;
 
 pub const OFFSET_MASK: u32 = 0x7fff_ffff;
@@ -36,11 +32,6 @@ impl Node {
     #[inline(always)]
     pub const fn has_leaf(&self) -> bool {
         self.check & !OFFSET_MASK != 0
-    }
-
-    #[inline(always)]
-    pub const fn is_embedded(&self) -> bool {
-        self.base & !OFFSET_MASK != 0 && self.check & !OFFSET_MASK != 0
     }
 
     #[inline(always)]

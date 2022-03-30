@@ -26,6 +26,7 @@ impl CodeMapper {
         }
     }
 
+    #[inline]
     pub const fn alphabet_size(&self) -> u32 {
         self.alphabet_size
     }
@@ -40,6 +41,7 @@ impl CodeMapper {
         None
     }
 
+    #[inline]
     pub fn heap_bytes(&self) -> usize {
         self.table.len() * std::mem::size_of::<u32>()
     }
