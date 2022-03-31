@@ -12,7 +12,7 @@ pub(crate) const MAX_VALUE: u32 = OFFSET_MASK;
 pub(crate) const END_CODE: u32 = 0;
 
 /// Special terminator, which must not be contained in keys.
-pub const END_MARKER: u32 = 0;
+pub const END_MARKER: char = 0 as char;
 
 pub use mpftrie::MpfTrie;
 pub use mptrie::MpTrie;

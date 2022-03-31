@@ -120,7 +120,7 @@ impl MpTrie {
 
         while !self.is_leaf(node_idx) {
             if let Some(c) = chars.next() {
-                if let Some(mc) = self.mapper.get(c as u32) {
+                if let Some(mc) = self.mapper.get(c) {
                     if let Some(child_idx) = self.get_child_idx(node_idx, mc) {
                         node_idx = child_idx;
                     } else {
@@ -142,7 +142,7 @@ impl MpTrie {
         tail_pos += 1;
         for _ in 0..tail_len {
             if let Some(c) = chars.next() {
-                if let Some(mc) = self.mapper.get(c as u32) {
+                if let Some(mc) = self.mapper.get(c) {
                     if mc != utils::unpack_u32(&self.tails[tail_pos..], self.code_size) {
                         return None;
                     }
@@ -212,7 +212,7 @@ impl MpTrie {
     {
         mapped.clear();
         for c in text.as_ref().chars() {
-            mapped.push(self.mapper.get(c as u32));
+            mapped.push(self.mapper.get(c));
         }
     }
 

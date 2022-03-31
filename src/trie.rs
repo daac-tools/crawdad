@@ -108,7 +108,7 @@ impl Trie {
     {
         let mut node_idx = 0;
         for c in key.as_ref().chars() {
-            if let Some(mc) = self.mapper.get(c as u32) {
+            if let Some(mc) = self.mapper.get(c) {
                 if let Some(child_idx) = self.get_child_idx(node_idx, mc) {
                     node_idx = child_idx;
                 } else {
@@ -178,7 +178,7 @@ impl Trie {
     {
         mapped.clear();
         for c in text.as_ref().chars() {
-            mapped.push(self.mapper.get(c as u32));
+            mapped.push(self.mapper.get(c));
         }
     }
 

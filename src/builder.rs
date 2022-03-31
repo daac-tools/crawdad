@@ -9,13 +9,13 @@ use sucds::RsBitVector;
 
 #[derive(Default)]
 struct Record {
-    key: Vec<u32>,
+    key: Vec<char>,
     value: u32,
 }
 
 #[derive(Default, Debug, PartialEq, Eq)]
 struct Suffix {
-    key: Vec<u32>,
+    key: Vec<char>,
     value: u32,
 }
 
@@ -57,7 +57,7 @@ impl Builder {
         self.records = records
             .into_iter()
             .map(|(k, v)| Record {
-                key: k.as_ref().chars().map(|c| c as u32).collect(),
+                key: k.as_ref().chars().collect(),
                 value: v,
             })
             .collect();
@@ -513,7 +513,7 @@ fn make_prefix_free(records: &mut [Record]) -> Result<()> {
     Ok(())
 }
 
-fn pop_end_marker(x: &[u32]) -> Vec<u32> {
+fn pop_end_marker(x: &[char]) -> Vec<char> {
     let mut x = x.to_vec();
     if let Some(&c) = x.last() {
         if c == END_MARKER {

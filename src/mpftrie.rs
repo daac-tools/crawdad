@@ -121,7 +121,7 @@ impl MpfTrie {
 
         while !self.is_leaf(node_idx) {
             if let Some(c) = chars.next() {
-                if let Some(mc) = self.mapper.get(c as u32) {
+                if let Some(mc) = self.mapper.get(c) {
                     if let Some(child_idx) = self.get_child_idx(node_idx, mc) {
                         node_idx = child_idx;
                     } else {
@@ -138,7 +138,7 @@ impl MpfTrie {
         }
 
         let value = self.get_value(node_idx);
-        let suffix: Vec<_> = chars.map(|c| self.mapper.get(c as u32)).collect();
+        let suffix: Vec<_> = chars.map(|c| self.mapper.get(c)).collect();
 
         assert!(self.ranks.get_bit(node_idx as usize));
         let aux_pos = self.ranks.rank1(node_idx as usize);
@@ -205,7 +205,7 @@ impl MpfTrie {
     {
         mapped.clear();
         for c in text.as_ref().chars() {
-            mapped.push(self.mapper.get(c as u32));
+            mapped.push(self.mapper.get(c));
         }
     }
 
