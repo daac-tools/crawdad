@@ -51,7 +51,7 @@ impl MpfTrie {
     {
         Builder::new()
             .minimal_prefix()
-            .from_keys(keys)?
+            .build_from_keys(keys)?
             .release_mpftrie()
     }
 
@@ -90,7 +90,7 @@ impl MpfTrie {
     {
         Builder::new()
             .minimal_prefix()
-            .from_records(records)?
+            .build_from_records(records)?
             .release_mpftrie()
     }
 
@@ -127,6 +127,8 @@ impl MpfTrie {
                     } else {
                         return None;
                     }
+                } else {
+                    return None;
                 }
             } else if self.has_leaf(node_idx) {
                 return Some(self.get_value(self.get_leaf_idx(node_idx)));
@@ -178,7 +180,7 @@ impl MpfTrie {
     /// assert_eq!(iter.next(), Some((1, 3)));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn common_prefix_searcher<'k, 't>(
+    pub const fn common_prefix_searcher<'k, 't>(
         &'t self,
         text: &'k [Option<u32>],
     ) -> CommonPrefixSearcher<'k, 't> {
@@ -308,7 +310,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
                     .text
                     .get(self.text_pos..self.text_pos + tail_len as usize)
                 {
-                    if let Some(suf_hash) = utils::murmur_hash2(&suffix) {
+                    if let Some(suf_hash) = utils::murmur_hash2(suffix) {
                         if tail_hash == suf_hash as u8 {
                             let pos = self.text_pos + suffix.len();
                             self.text_pos = self.text.len();

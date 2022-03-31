@@ -45,7 +45,7 @@ impl Trie {
         I: IntoIterator<Item = K>,
         K: AsRef<str>,
     {
-        Builder::new().from_keys(keys)?.release_trie()
+        Builder::new().build_from_keys(keys)?.release_trie()
     }
 
     /// Creates a new [`Trie`] from input records.
@@ -81,7 +81,7 @@ impl Trie {
         I: IntoIterator<Item = (K, u32)>,
         K: AsRef<str>,
     {
-        Builder::new().from_records(records)?.release_trie()
+        Builder::new().build_from_records(records)?.release_trie()
     }
 
     /// Returns a value associated with an input key if exists.
@@ -153,7 +153,7 @@ impl Trie {
     /// assert_eq!(iter.next(), None);
     /// ```
     #[inline(always)]
-    pub fn common_prefix_searcher<'k, 't>(
+    pub const fn common_prefix_searcher<'k, 't>(
         &'t self,
         text: &'k [Option<u32>],
     ) -> CommonPrefixSearcher<'k, 't> {

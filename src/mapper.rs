@@ -1,7 +1,7 @@
 pub const INVALID_CODE: u32 = u32::MAX;
 
 #[derive(Default, Clone)]
-pub(crate) struct CodeMapper {
+pub struct CodeMapper {
     table: Vec<u32>,
     alphabet_size: u32,
 }

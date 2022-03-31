@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 
 /// pack_size returns the smallest number of bytes that can encode `n`.
 #[inline(always)]
-pub fn pack_size(n: u32) -> u8 {
+pub const fn pack_size(n: u32) -> u8 {
     if n < 1 << 8 {
         1
     } else if n < 1 << 16 {
@@ -16,21 +16,21 @@ pub fn pack_size(n: u32) -> u8 {
 
 #[inline(always)]
 pub fn pack_u32(vec: &mut Vec<u8>, mut n: u32, nbytes: u8) {
-    assert!(1 <= nbytes && nbytes <= 4);
+    debug_assert!((1..=4).contains(&nbytes));
 
     for _ in 0..nbytes {
         vec.push(n as u8);
-        n = n >> 8;
+        n >>= 8;
     }
 }
 
 #[inline(always)]
 pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
-    assert!(1 <= nbytes && nbytes <= 4);
+    debug_assert!((1..=4).contains(&nbytes));
 
     let mut n = 0;
     for (i, &b) in slice[..nbytes as usize].iter().enumerate() {
-        n = n | ((b as u32) << (8 * i));
+        n |= (b as u32) << (8 * i);
     }
     n
 }
@@ -50,7 +50,7 @@ pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
 
     // Mix 4 bytes at a time into the hash
     for k in key {
-        if let Some(mut k) = k.clone() {
+        if let Some(mut k) = *k {
             k = k.wrapping_mul(m);
             k ^= k >> r;
             k = k.wrapping_mul(m);

@@ -50,7 +50,7 @@ impl MpTrie {
     {
         Builder::new()
             .minimal_prefix()
-            .from_keys(keys)?
+            .build_from_keys(keys)?
             .release_mptrie()
     }
 
@@ -89,7 +89,7 @@ impl MpTrie {
     {
         Builder::new()
             .minimal_prefix()
-            .from_records(records)?
+            .build_from_records(records)?
             .release_mptrie()
     }
 
@@ -155,7 +155,7 @@ impl MpTrie {
             tail_pos += self.code_size as usize;
         }
 
-        if let Some(_) = chars.next() {
+        if chars.next().is_some() {
             None
         } else {
             Some(utils::unpack_u32(&self.tails[tail_pos..], self.value_size))
@@ -187,7 +187,7 @@ impl MpTrie {
     /// assert_eq!(iter.next(), Some((1, 3)));
     /// assert_eq!(iter.next(), None);
     /// ```
-    pub fn common_prefix_searcher<'k, 't>(
+    pub const fn common_prefix_searcher<'k, 't>(
         &'t self,
         text: &'k [Option<u32>],
     ) -> CommonPrefixSearcher<'k, 't> {

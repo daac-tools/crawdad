@@ -35,20 +35,21 @@ impl Builder {
         Self::default()
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn minimal_prefix(mut self) -> Self {
         self.suffixes = Some(vec![]);
         self
     }
 
-    pub fn from_keys<I, K>(self, keys: I) -> Result<Self>
+    pub fn build_from_keys<I, K>(self, keys: I) -> Result<Self>
     where
         I: IntoIterator<Item = K>,
         K: AsRef<str>,
     {
-        self.from_records(keys.into_iter().enumerate().map(|(i, k)| (k, i as u32)))
+        self.build_from_records(keys.into_iter().enumerate().map(|(i, k)| (k, i as u32)))
     }
 
-    pub fn from_records<I, K>(mut self, records: I) -> Result<Self>
+    pub fn build_from_records<I, K>(mut self, records: I) -> Result<Self>
     where
         I: IntoIterator<Item = (K, u32)>,
         K: AsRef<str>,
@@ -80,6 +81,7 @@ impl Builder {
         Ok(self)
     }
 
+    #[allow(clippy::missing_const_for_fn)]
     pub fn release_trie(self) -> Result<Trie> {
         if self.suffixes.is_some() {
             Err(CrawdadError::setup("minimal_prefix must be disabled."))
@@ -253,16 +255,14 @@ impl Builder {
                 });
                 return Ok(());
             }
-        } else {
-            if self.records[spos].key.len() == depth {
-                debug_assert_eq!(spos + 1, epos);
-                debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
-                // Sets IsLeaf = True
-                self.nodes[node_idx as usize].base = self.records[spos].value | !OFFSET_MASK;
-                // Note: HasLeaf must not be set here and should be set in finish()
-                // because MSB of check is used to indicate vacant element.
-                return Ok(());
-            }
+        } else if self.records[spos].key.len() == depth {
+            debug_assert_eq!(spos + 1, epos);
+            debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
+            // Sets IsLeaf = True
+            self.nodes[node_idx as usize].base = self.records[spos].value | !OFFSET_MASK;
+            // Note: HasLeaf must not be set here and should be set in finish()
+            // because MSB of check is used to indicate vacant element.
+            return Ok(());
         }
 
         self.fetch_labels(spos, epos, depth);
