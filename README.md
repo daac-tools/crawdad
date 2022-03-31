@@ -1,3 +1,3 @@
-# 🦞 Crawdad: ChaRActer-Wise Double-Array trie Dictionary
+# 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 
-Fast trie library for CKJ text processing.
+Double-array trie library for fast CKJ text processing.
