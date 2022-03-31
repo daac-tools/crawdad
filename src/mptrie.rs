@@ -139,7 +139,7 @@ impl MpTrie {
         let tail_pos = self.get_value(node_idx) as usize;
         let mut tail_iter = self.tail_iter(tail_pos);
 
-        while let Some(tc) = tail_iter.next() {
+        for tc in tail_iter.by_ref() {
             if let Some(c) = chars.next() {
                 if let Some(mc) = self.mapper.get(c) {
                     if mc != tc {
@@ -316,7 +316,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
             if self.trie.is_leaf(self.node_idx) {
                 let tail_pos = self.trie.get_value(self.node_idx) as usize;
                 let mut tail_iter = self.trie.tail_iter(tail_pos);
-                while let Some(tc) = tail_iter.next() {
+                for tc in tail_iter.by_ref() {
                     if self.text_pos == self.text.len() {
                         return None;
                     }
