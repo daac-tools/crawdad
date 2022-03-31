@@ -1,4 +1,4 @@
-pub mod builder;
+mod builder;
 pub mod errors;
 mod mapper;
 pub mod mpftrie;
@@ -11,20 +11,25 @@ pub(crate) const INVALID_IDX: u32 = 0xffff_ffff;
 pub(crate) const MAX_VALUE: u32 = OFFSET_MASK;
 pub(crate) const END_CODE: u32 = 0;
 
-///
+/// Special terminator, which must not be contained in keys.
 pub const END_MARKER: u32 = 0;
 
 pub use mpftrie::MpfTrie;
 pub use mptrie::MpTrie;
 pub use trie::Trie;
 
+/// Basic statistics of trie.
 pub trait Statistics {
+    /// Returns the total amount of heap used by this automaton in bytes.
     fn heap_bytes(&self) -> usize;
 
+    /// Returns the number of reserved elements.
     fn num_elems(&self) -> usize;
 
+    /// Returns the number of vacant elements.
     fn num_vacants(&self) -> usize;
 
+    /// Returns the ratio of vacant elements.
     fn vacant_ratio(&self) -> f64 {
         self.num_vacants() as f64 / self.num_elems() as f64
     }

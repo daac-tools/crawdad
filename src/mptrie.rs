@@ -5,6 +5,7 @@ use crate::{utils, Node, Statistics};
 
 use crate::END_CODE;
 
+/// Fast trie implementation using minimal-prefix double-array structure.
 pub struct MpTrie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,
@@ -14,6 +15,34 @@ pub struct MpTrie {
 }
 
 impl MpTrie {
+    /// Creates a new [`MpTrie`] from input keys.
+    ///
+    /// # Arguments
+    ///
+    /// - `keys`: List of string keys.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::errors::CrawdadError`] will be returned when
+    ///
+    /// - `keys` is empty,
+    /// - `keys` contains empty strings,
+    /// - `keys` contains duplicate keys,
+    /// - `keys` is not sorted,
+    /// - the scale of `keys` exceeds the expected one, or
+    /// - the scale of the resulting trie exceeds the expected one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{MpTrie, Statistics};
+    ///
+    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let trie = MpTrie::from_keys(keys).unwrap();
+    ///
+    /// assert_eq!(trie.num_elems(), 16);
+    /// assert_eq!(trie.num_vacants(), 9);
+    /// ```
     pub fn from_keys<I, K>(keys: I) -> Result<Self>
     where
         I: IntoIterator<Item = K>,
@@ -25,6 +54,34 @@ impl MpTrie {
             .release_mptrie()
     }
 
+    /// Creates a new [`MpTrie`] from input records.
+    ///
+    /// # Arguments
+    ///
+    /// - `records`: List of pairs of a string key and an associated value.
+    ///
+    /// # Errors
+    ///
+    /// [`crate::errors::CrawdadError`] will be returned when
+    ///
+    /// - `records` is empty,
+    /// - `records` contains empty strings,
+    /// - `records` contains duplicate keys,
+    /// - keys in `records` are not sorted,
+    /// - the scale of `keys` exceeds the expected one, or
+    /// - the scale of the resulting trie exceeds the expected one.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{MpTrie, Statistics};
+    ///
+    /// let records = vec![("世界", 2), ("世界中", 3), ("世直し", 5), ("国民", 7)];
+    /// let trie = MpTrie::from_records(records).unwrap();
+    ///
+    /// assert_eq!(trie.num_elems(), 16);
+    /// assert_eq!(trie.num_vacants(), 9);
+    /// ```
     pub fn from_records<I, K>(records: I) -> Result<Self>
     where
         I: IntoIterator<Item = (K, u32)>,
@@ -36,6 +93,23 @@ impl MpTrie {
             .release_mptrie()
     }
 
+    /// Returns a value associated with an input key if exists.
+    ///
+    /// # Arguments
+    ///
+    /// - `key`: Search key.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::MpTrie;
+    ///
+    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let trie = MpTrie::from_keys(&keys).unwrap();
+    ///
+    /// assert_eq!(trie.exact_match("世界中"), Some(1));
+    /// assert_eq!(trie.exact_match("日本中"), None);
+    /// ```
     #[inline(always)]
     pub fn exact_match<K>(&self, key: K) -> Option<u32>
     where
@@ -52,6 +126,8 @@ impl MpTrie {
                     } else {
                         return None;
                     }
+                } else {
+                    return None;
                 }
             } else if self.has_leaf(node_idx) {
                 return Some(self.get_value(self.get_leaf_idx(node_idx)));
@@ -70,6 +146,8 @@ impl MpTrie {
                     if mc != utils::unpack_u32(&self.tails[tail_pos..], self.code_size) {
                         return None;
                     }
+                } else {
+                    return None;
                 }
             } else {
                 return None;
@@ -84,6 +162,28 @@ impl MpTrie {
         }
     }
 
+    /// Returns an iterator for common prefix search.
+    ///
+    /// # Arguments
+    ///
+    /// - `text`: Search text mapped by [`map_text`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::MpTrie;
+    ///
+    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let trie = MpTrie::from_keys(&keys).unwrap();
+    ///
+    /// let mut mapped = vec![];
+    /// trie.map_text("世界中で世直し", &mut mapped);
+    ///
+    /// let mut iter = trie.common_prefix_searcher(&mapped[..]);
+    /// assert_eq!(iter.next(), Some((0, 2)));
+    /// assert_eq!(iter.next(), Some((1, 3)));
+    /// assert_eq!(iter.next(), None);
+    /// ```
     pub fn common_prefix_searcher<'k, 't>(
         &'t self,
         text: &'k [Option<u32>],
@@ -96,6 +196,12 @@ impl MpTrie {
         }
     }
 
+    /// Prepares a search text for common prefix search.
+    ///
+    /// # Arguments
+    ///
+    /// - `text`: Search text.
+    /// - `mapped`: Mapped text (out).
     #[inline(always)]
     pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
     where

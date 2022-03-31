@@ -1,12 +1,19 @@
+//! Definition of errors.
 use std::{fmt, result};
 
 /// A specialized Result type for Crawdad.
 pub type Result<T, E = CrawdadError> = result::Result<T, E>;
 
+/// Errors in crawdad.
 #[derive(Debug)]
 pub enum CrawdadError {
+    /// Contains [`InputError`].
     Input(InputError),
+
+    /// Contains [`SetupError`].
     Setup(SetupError),
+
+    /// Contains [`ScaleError`].
     Scale(ScaleError),
 }
 
@@ -32,6 +39,7 @@ impl CrawdadError {
     }
 }
 
+/// Error used when the input argument is invalid.
 #[derive(Debug)]
 pub struct InputError {
     msg: &'static str,
@@ -43,6 +51,7 @@ impl fmt::Display for InputError {
     }
 }
 
+/// Error used when the setup is invalid.
 #[derive(Debug)]
 pub struct SetupError {
     msg: &'static str,
@@ -54,6 +63,7 @@ impl fmt::Display for SetupError {
     }
 }
 
+/// Error used when the scale of a resulting trie exceeds the expected one.
 #[derive(Debug)]
 pub struct ScaleError {
     arg: &'static str,
