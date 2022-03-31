@@ -1,6 +1,6 @@
 use crate::errors::{CrawdadError, Result};
 use crate::mapper::CodeMapper;
-use crate::{utils, MpTrie, MpfTrie, Node, Trie};
+use crate::{utils, FmpTrie, MpTrie, Node, Trie};
 use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
 
 use std::cmp::Ordering;
@@ -154,7 +154,7 @@ impl Builder {
         })
     }
 
-    pub fn release_mpftrie(self) -> Result<MpfTrie> {
+    pub fn release_mpftrie(self) -> Result<FmpTrie> {
         if self.suffixes.is_none() {
             return Err(CrawdadError::setup("minimal_prefix must be enabled."));
         }
@@ -202,7 +202,7 @@ impl Builder {
             auxes.push((tail.len() as u8, tail_hash as u8));
         }
 
-        Ok(MpfTrie {
+        Ok(FmpTrie {
             mapper,
             nodes,
             ranks: RsBitVector::from_bits(ranks),

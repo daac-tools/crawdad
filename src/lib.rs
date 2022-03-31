@@ -1,8 +1,8 @@
 //! 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 mod builder;
 pub mod errors;
+pub mod fmptrie;
 mod mapper;
-pub mod mpftrie;
 pub mod mptrie;
 pub mod trie;
 mod utils;
@@ -15,7 +15,7 @@ pub(crate) const END_CODE: u32 = 0;
 /// Special terminator, which must not be contained in keys.
 pub const END_MARKER: char = 0 as char;
 
-pub use mpftrie::MpfTrie;
+pub use fmptrie::FmpTrie;
 pub use mptrie::MpTrie;
 pub use trie::Trie;
 

@@ -1,4 +1,4 @@
-//! Trie dictionary implementation through the minimal-prefix filter double-array structure.
+//! Trie dictionary implementation through fuzzy minimal-prefix double-array structure.
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
@@ -8,16 +8,16 @@ use crate::END_CODE;
 
 use sucds::RsBitVector;
 
-/// Fast trie implementation using minimal-prefix filter double-array structure.
-pub struct MpfTrie {
+/// Fast trie implementation using fuzzy minimal-prefix double-array structure.
+pub struct FmpTrie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,
     pub(crate) ranks: RsBitVector,
     pub(crate) auxes: Vec<(u8, u8)>,
 }
 
-impl MpfTrie {
-    /// Creates a new [`MpfTrie`] from input keys.
+impl FmpTrie {
+    /// Creates a new [`FmpTrie`] from input keys.
     ///
     /// # Arguments
     ///
@@ -37,10 +37,10 @@ impl MpfTrie {
     /// # Examples
     ///
     /// ```
-    /// use crawdad::{MpfTrie, Statistics};
+    /// use crawdad::{FmpTrie, Statistics};
     ///
     /// let keys = vec!["世界", "世界中", "世直し", "国民"];
-    /// let trie = MpfTrie::from_keys(keys).unwrap();
+    /// let trie = FmpTrie::from_keys(keys).unwrap();
     ///
     /// assert_eq!(trie.num_elems(), 16);
     /// assert_eq!(trie.num_vacants(), 9);
@@ -56,7 +56,7 @@ impl MpfTrie {
             .release_mpftrie()
     }
 
-    /// Creates a new [`MpfTrie`] from input records.
+    /// Creates a new [`FmpTrie`] from input records.
     ///
     /// # Arguments
     ///
@@ -76,10 +76,10 @@ impl MpfTrie {
     /// # Examples
     ///
     /// ```
-    /// use crawdad::{MpfTrie, Statistics};
+    /// use crawdad::{FmpTrie, Statistics};
     ///
     /// let records = vec![("世界", 2), ("世界中", 3), ("世直し", 5), ("国民", 7)];
-    /// let trie = MpfTrie::from_records(records).unwrap();
+    /// let trie = FmpTrie::from_records(records).unwrap();
     ///
     /// assert_eq!(trie.num_elems(), 16);
     /// assert_eq!(trie.num_vacants(), 9);
@@ -104,10 +104,10 @@ impl MpfTrie {
     /// # Examples
     ///
     /// ```
-    /// use crawdad::MpfTrie;
+    /// use crawdad::FmpTrie;
     ///
     /// let keys = vec!["世界", "世界中", "世直し", "国民"];
-    /// let trie = MpfTrie::from_keys(&keys).unwrap();
+    /// let trie = FmpTrie::from_keys(&keys).unwrap();
     ///
     /// assert_eq!(trie.exact_match("世界中"), Some(1));
     /// assert_eq!(trie.exact_match("日本中"), None);
@@ -163,15 +163,15 @@ impl MpfTrie {
     ///
     /// # Arguments
     ///
-    /// - `text`: Search text mapped by [`MpfTrie::map_text`].
+    /// - `text`: Search text mapped by [`FmpTrie::map_text`].
     ///
     /// # Examples
     ///
     /// ```
-    /// use crawdad::MpfTrie;
+    /// use crawdad::FmpTrie;
     ///
     /// let keys = vec!["世界", "世界中", "世直し", "国民"];
-    /// let trie = MpfTrie::from_keys(&keys).unwrap();
+    /// let trie = FmpTrie::from_keys(&keys).unwrap();
     ///
     /// let mut mapped = vec![];
     /// trie.map_text("世界中で世直し", &mut mapped);
@@ -256,7 +256,7 @@ impl MpfTrie {
     }
 }
 
-impl Statistics for MpfTrie {
+impl Statistics for FmpTrie {
     fn heap_bytes(&self) -> usize {
         self.mapper.heap_bytes()
             + self.nodes.len() * std::mem::size_of::<Node>()
@@ -273,11 +273,11 @@ impl Statistics for MpfTrie {
     }
 }
 
-/// Iterator created by [`MpfTrie::common_prefix_searcher`].
+/// Iterator created by [`FmpTrie::common_prefix_searcher`].
 pub struct CommonPrefixSearcher<'k, 't> {
     text: &'k [Option<u32>],
     text_pos: usize,
-    trie: &'t MpfTrie,
+    trie: &'t FmpTrie,
     node_idx: u32,
 }
 
@@ -337,7 +337,7 @@ mod tests {
     #[test]
     fn test_exact_match() {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
-        let trie = MpfTrie::from_keys(&keys).unwrap();
+        let trie = FmpTrie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn test_common_prefix_search() {
         let keys = vec!["世界", "世界中", "世直し", "国民"];
-        let trie = MpfTrie::from_keys(&keys).unwrap();
+        let trie = FmpTrie::from_keys(&keys).unwrap();
 
         let mut mapped = vec![];
         trie.map_text("国民が世界中で世直し", &mut mapped);
