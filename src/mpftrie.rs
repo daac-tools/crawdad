@@ -7,7 +7,7 @@ use crate::END_CODE;
 
 use sucds::RsBitVector;
 
-/// Fast trie implementation using filter double-array structure.
+/// Fast trie implementation using minimal-prefix filter double-array structure.
 pub struct MpfTrie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,
@@ -24,7 +24,7 @@ impl MpfTrie {
     ///
     /// # Errors
     ///
-    /// [`crate::errors::CrawdadError`] will be returned when
+    /// [`CrawdadError`](crate::errors::CrawdadError) will be returned when
     ///
     /// - `keys` is empty,
     /// - `keys` contains empty strings,
@@ -63,7 +63,7 @@ impl MpfTrie {
     ///
     /// # Errors
     ///
-    /// [`crate::errors::CrawdadError`] will be returned when
+    /// [`CrawdadError`](crate::errors::CrawdadError) will be returned when
     ///
     /// - `records` is empty,
     /// - `records` contains empty strings,
@@ -155,9 +155,12 @@ impl MpfTrie {
 
     /// Returns an iterator for common prefix search.
     ///
+    /// This operation finds all occurrences of keys starting from a search text, and
+    /// the occurrences are reported as pairs of value and end position.
+    ///
     /// # Arguments
     ///
-    /// - `text`: Search text mapped by [`map_text`].
+    /// - `text`: Search text mapped by [`MpfTrie::map_text`].
     ///
     /// # Examples
     ///
@@ -192,7 +195,7 @@ impl MpfTrie {
     /// # Arguments
     ///
     /// - `text`: Search text.
-    /// - `mapped`: Mapped text (out).
+    /// - `mapped`: Mapped text.
     #[inline(always)]
     pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
     where
@@ -267,6 +270,7 @@ impl Statistics for MpfTrie {
     }
 }
 
+/// Iterator created by [`MpfTrie::common_prefix_searcher`].
 pub struct CommonPrefixSearcher<'k, 't> {
     text: &'k [Option<u32>],
     text_pos: usize,
