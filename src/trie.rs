@@ -1,3 +1,4 @@
+//! Trie dictionary implementation through the reduced double-array structure.
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;

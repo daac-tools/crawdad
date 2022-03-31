@@ -1,3 +1,3 @@
 # 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 
-Double-array trie library for fast CKJ text processing.
+Crawdad is a crate for fast CKJ-text processing using character-wise double-array tries.
