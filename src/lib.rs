@@ -1,3 +1,4 @@
+//! 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 mod builder;
 pub mod errors;
 mod mapper;

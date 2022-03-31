@@ -344,7 +344,7 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
     }
 }
 
-pub struct TailIter<'a> {
+struct TailIter<'a> {
     trie: &'a MpTrie,
     pos: usize,
     len: usize,
