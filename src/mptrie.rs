@@ -351,6 +351,7 @@ struct TailIter<'a> {
 }
 
 impl TailIter<'_> {
+    #[inline(always)]
     fn value(&self) -> u32 {
         utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.value_size)
     }
