@@ -136,14 +136,13 @@ impl MpTrie {
             }
         }
 
-        let mut tail_pos = self.get_value(node_idx) as usize;
-        let tail_len = self.tails[tail_pos] as usize;
+        let tail_pos = self.get_value(node_idx) as usize;
+        let mut tail_iter = self.tail_iter(tail_pos);
 
-        tail_pos += 1;
-        for _ in 0..tail_len {
+        while let Some(tc) = tail_iter.next() {
             if let Some(c) = chars.next() {
                 if let Some(mc) = self.mapper.get(c) {
-                    if mc != utils::unpack_u32(&self.tails[tail_pos..], self.code_size) {
+                    if mc != tc {
                         return None;
                     }
                 } else {
@@ -152,13 +151,12 @@ impl MpTrie {
             } else {
                 return None;
             }
-            tail_pos += self.code_size as usize;
         }
 
         if chars.next().is_some() {
             None
         } else {
-            Some(utils::unpack_u32(&self.tails[tail_pos..], self.value_size))
+            Some(tail_iter.value())
         }
     }
 
@@ -213,6 +211,16 @@ impl MpTrie {
         mapped.clear();
         for c in text.as_ref().chars() {
             mapped.push(self.mapper.get(c));
+        }
+    }
+
+    #[inline(always)]
+    fn tail_iter(&self, tail_pos: usize) -> TailIter {
+        let tail_len = self.tails[tail_pos] as usize;
+        TailIter {
+            trie: self,
+            pos: tail_pos + 1,
+            len: tail_len,
         }
     }
 
@@ -306,17 +314,14 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
 
             self.text_pos += 1;
             if self.trie.is_leaf(self.node_idx) {
-                let mut tail_pos = self.trie.get_value(self.node_idx) as usize;
-                let tail_len = self.trie.tails[tail_pos] as usize;
-                tail_pos += 1;
-                for _ in 0..tail_len {
+                let tail_pos = self.trie.get_value(self.node_idx) as usize;
+                let mut tail_iter = self.trie.tail_iter(tail_pos);
+                while let Some(tc) = tail_iter.next() {
                     if self.text_pos == self.text.len() {
                         return None;
                     }
                     if let Some(mc) = self.text[self.text_pos] {
-                        if mc
-                            != utils::unpack_u32(&self.trie.tails[tail_pos..], self.trie.code_size)
-                        {
+                        if mc != tc {
                             self.text_pos = self.text.len();
                             return None;
                         }
@@ -324,11 +329,9 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
                         self.text_pos = self.text.len();
                         return None;
                     }
-
-                    tail_pos += self.trie.code_size as usize;
                     self.text_pos += 1;
                 }
-                let val = utils::unpack_u32(&self.trie.tails[tail_pos..], self.trie.value_size);
+                let val = tail_iter.value();
                 let pos = self.text_pos;
                 self.text_pos = self.text.len();
                 return Some((val, pos));
@@ -338,6 +341,34 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
             }
         }
         None
+    }
+}
+
+pub struct TailIter<'a> {
+    trie: &'a MpTrie,
+    pos: usize,
+    len: usize,
+}
+
+impl TailIter<'_> {
+    fn value(&self) -> u32 {
+        utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.value_size)
+    }
+}
+
+impl Iterator for TailIter<'_> {
+    type Item = u32;
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.len != 0 {
+            let c = utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.code_size);
+            self.pos += self.trie.code_size as usize;
+            self.len -= 1;
+            Some(c)
+        } else {
+            None
+        }
     }
 }
 
