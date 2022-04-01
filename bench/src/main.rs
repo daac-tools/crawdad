@@ -47,8 +47,8 @@ macro_rules! crawdad_common {
             }
             let duration = start.elapsed();
             println!(
-                "exact_match: {:.3} [us/query]",
-                duration.as_secs_f64() * 1000000. / TRIALS as f64 / SAMPLES as f64
+                "exact_match: {:.3} [ns/query]",
+                duration.as_secs_f64() * 1000000000. / TRIALS as f64 / SAMPLES as f64
             );
             println!("dummy: {}", dummy);
         }
@@ -91,7 +91,11 @@ fn main() {
     let args = Args::parse();
 
     println!("keys_filename: {}", &args.keys_filename);
-    let keys = load_file(&args.keys_filename);
+    let keys = {
+        let mut keys = load_file(&args.keys_filename);
+        keys.sort_unstable();
+        keys
+    };
     let queries = random_sample(&keys);
     let texts = if let Some(texts_filename) = args.texts_filename {
         println!("texts_filename: {}", &texts_filename);
@@ -146,8 +150,8 @@ fn main() {
             }
             let duration = start.elapsed();
             println!(
-                "exact_match: {:.3} [us/query]",
-                duration.as_secs_f64() * 1000000. / TRIALS as f64 / SAMPLES as f64
+                "exact_match: {:.3} [ns/query]",
+                duration.as_secs_f64() * 1000000000. / TRIALS as f64 / SAMPLES as f64
             );
             println!("dummy: {}", dummy);
         }
