@@ -347,27 +347,26 @@ mod tests {
 
     #[test]
     fn test_exact_match() {
-        let keys = vec!["世界", "世界中", "世直し", "直し中"];
+        let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = FmpTrie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
         assert_eq!(trie.exact_match("世"), None);
-        assert_eq!(trie.exact_match("日本"), None);
+        assert_eq!(trie.exact_match("世論"), None);
         assert_eq!(trie.exact_match("世界中で"), None);
-        assert_eq!(trie.exact_match("直し"), None);
+        assert_eq!(trie.exact_match("統計"), None);
+        assert_eq!(trie.exact_match("統計調"), None);
+        assert_eq!(trie.exact_match("日本"), None);
     }
 
     #[test]
     fn test_common_prefix_search() {
-        let keys = vec!["世界", "世界中", "世直し", "直し中"];
+        let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = FmpTrie::from_keys(&keys).unwrap();
 
         let mut mapped = vec![];
-        trie.map_text("国民が世界中で世直し", &mut mapped);
-
-        let mut mapped = vec![];
-        trie.map_text("世界中で世直し中", &mut mapped);
+        trie.map_text("世界中の統計世論調査", &mut mapped);
 
         let mut matches = vec![];
         for i in 0..mapped.len() {
@@ -375,6 +374,6 @@ mod tests {
                 matches.push((m.value(), i + m.end()));
             }
         }
-        assert_eq!(matches, vec![(0, 2), (1, 3), (2, 7), (3, 8)]);
+        assert_eq!(matches, vec![(0, 2), (1, 3), (2, 10)]);
     }
 }
