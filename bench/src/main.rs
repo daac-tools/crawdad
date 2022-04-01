@@ -30,7 +30,7 @@ macro_rules! crawdad_common {
         print_heap_bytes(trie.heap_bytes());
         println!("num_elems: {}", trie.num_elems());
         println!("vacant_ratio: {:.3}", trie.vacant_ratio());
-        println!("constr_sec: {:.3}", duration.as_secs_f64());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
 
         {
             // Warmup
@@ -132,7 +132,7 @@ fn main() {
         let duration = start.elapsed();
         print_heap_bytes(data.len());
         println!("num_elems: {}", data.len() / 4);
-        println!("constr_sec: {:.3}", duration.as_secs_f64());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
 
         let da = yada::DoubleArray::new(data);
         {
