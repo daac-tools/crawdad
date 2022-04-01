@@ -172,6 +172,8 @@ impl MpTrie {
     ///
     /// # Examples
     ///
+    /// You can find all occurrences  of keys in a text as follows.
+    ///
     /// ```
     /// use crawdad::MpTrie;
     ///
@@ -179,13 +181,15 @@ impl MpTrie {
     /// let trie = MpTrie::from_keys(&keys).unwrap();
     ///
     /// let mut mapped = vec![];
-    /// trie.map_text("世界中で世直し", &mut mapped);
+    /// trie.map_text("国民が世界中で世直し", &mut mapped);
     ///
     /// let mut matches = vec![];
-    /// for m in trie.common_prefix_searcher(&mapped[..]) {
-    ///     matches.push((m.value(), m.end()));
+    /// for i in 0..mapped.len() {
+    ///     for m in trie.common_prefix_searcher(&mapped[i..]) {
+    ///         matches.push((m.value(), i + m.end()));
+    ///     }
     /// }
-    /// assert_eq!(matches, vec![(0, 2), (1, 3)]);
+    /// assert_eq!(matches, vec![(3, 2), (0, 5), (1, 6), (2, 10)]);
     /// ```
     pub const fn common_prefix_searcher<'k, 't>(
         &'t self,
