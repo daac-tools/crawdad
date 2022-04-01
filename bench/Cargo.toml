@@ -9,13 +9,10 @@ edition = "2021"
 crawdad = { path = ".." }  # Apache-2.0 or MIT
 yada = "0.5.0"  # Apache-2.0 or MIT
 clap = { version = "3.1", features = ["derive"] }  # MIT or Apache-2.0
+rand = "0.5.0"
 
 [dev-dependencies]
 criterion = { version = "0.3", features = ["html_reports"] }  # Apache-2.0 or MIT
-
-[[bin]]
-name = "bench"
-path = "src/bench.rs"
 
 [[bench]]
 name = "search"
