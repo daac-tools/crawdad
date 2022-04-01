@@ -3,6 +3,11 @@
 //! Crawdad is a library of natural language dictionaries using character-wise double-array tries.
 //! The implementation is optimized for strings of multibyte-characters,
 //! and you can enjoy fast text processing on such strings such as Japanese or Chinese.
+#![deny(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
+#[cfg(target_pointer_width = "16")]
+compile_error!("`target_pointer_width` must be larger than or equal to 32");
+
 mod builder;
 pub mod errors;
 pub mod fmptrie;

@@ -8,6 +8,11 @@ edition = "2021"
 [dependencies]
 sucds = "0.3.0"
 
+[features]
+default = ["std"]
+
+std = []
+
 [workspace]
 members = [
     "bench",
