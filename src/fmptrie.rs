@@ -21,9 +21,12 @@ pub struct FmpTrie {
 impl FmpTrie {
     /// Creates a new [`FmpTrie`] from input keys.
     ///
+    /// Values in `[0..n-1]` will be associated with keys in the lexicographical order,
+    /// where `n` is the number of keys.
+    ///
     /// # Arguments
     ///
-    /// - `keys`: List of string keys.
+    /// - `keys`: Sorted list of string keys.
     ///
     /// # Errors
     ///
@@ -41,11 +44,10 @@ impl FmpTrie {
     /// ```
     /// use crawdad::{FmpTrie, Statistics};
     ///
-    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = FmpTrie::from_keys(keys).unwrap();
     ///
-    /// assert_eq!(trie.num_elems(), 16);
-    /// assert_eq!(trie.num_vacants(), 9);
+    /// assert_eq!(trie.num_elems(), 8);
     /// ```
     pub fn from_keys<I, K>(keys: I) -> Result<Self>
     where
@@ -62,7 +64,7 @@ impl FmpTrie {
     ///
     /// # Arguments
     ///
-    /// - `records`: List of pairs of a string key and an associated value.
+    /// - `records`: Sorted list of key-value pairs.
     ///
     /// # Errors
     ///
@@ -80,11 +82,10 @@ impl FmpTrie {
     /// ```
     /// use crawdad::{FmpTrie, Statistics};
     ///
-    /// let records = vec![("世界", 2), ("世界中", 3), ("世直し", 5), ("国民", 7)];
+    /// let records = vec![("世界", 2), ("世界中", 3), ("国民", 2)];
     /// let trie = FmpTrie::from_records(records).unwrap();
     ///
-    /// assert_eq!(trie.num_elems(), 16);
-    /// assert_eq!(trie.num_vacants(), 9);
+    /// assert_eq!(trie.num_elems(), 8);
     /// ```
     pub fn from_records<I, K>(records: I) -> Result<Self>
     where
@@ -108,7 +109,7 @@ impl FmpTrie {
     /// ```
     /// use crawdad::FmpTrie;
     ///
-    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = FmpTrie::from_keys(&keys).unwrap();
     ///
     /// assert_eq!(trie.exact_match("世界中"), Some(1));
@@ -161,7 +162,7 @@ impl FmpTrie {
     /// Returns an iterator for common prefix search.
     ///
     /// This operation finds all occurrences of keys starting from a search text, and
-    /// the occurrences are reported as pairs of value and end position.
+    /// the occurrences are reported as a sequence of [`Match`](crate::Match).
     ///
     /// # Arguments
     ///
@@ -174,11 +175,11 @@ impl FmpTrie {
     /// ```
     /// use crawdad::FmpTrie;
     ///
-    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = FmpTrie::from_keys(&keys).unwrap();
     ///
     /// let mut mapped = vec![];
-    /// trie.map_text("国民が世界中で世直し", &mut mapped);
+    /// trie.map_text("国民が世界中にて", &mut mapped);
     ///
     /// let mut matches = vec![];
     /// for i in 0..mapped.len() {
@@ -186,7 +187,7 @@ impl FmpTrie {
     ///         matches.push((m.value(), i + m.end()));
     ///     }
     /// }
-    /// assert_eq!(matches, vec![(3, 2), (0, 5), (1, 6), (2, 10)]);
+    /// assert_eq!(matches, vec![(2, 2), (0, 5), (1, 6)]);
     /// ```
     pub const fn common_prefix_searcher<'k, 't>(
         &'t self,
