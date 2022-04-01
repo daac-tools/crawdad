@@ -14,9 +14,9 @@ clap = { version = "3.1", features = ["derive"] }  # MIT or Apache-2.0
 criterion = { version = "0.3", features = ["html_reports"] }  # Apache-2.0 or MIT
 
 [[bin]]
-name = "benchmark"
-path = "src/benchmark.rs"
+name = "bench"
+path = "src/bench.rs"
 
 [[bench]]
-name = "benchmark"
+name = "search"
 harness = false

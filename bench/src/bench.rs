@@ -10,7 +10,7 @@ use crawdad::Statistics;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[clap(name = "constr", about = "A program to measure.")]
+#[clap(name = "bench", about = "A program to measure the performance.")]
 struct Args {
     #[clap(short = 'k', long)]
     keys_filename: String,
@@ -37,8 +37,8 @@ macro_rules! crawdad_common {
                 for text in texts {
                     trie.map_text(text, &mut mapped);
                     for i in 0..mapped.len() {
-                        for (val, len) in trie.common_prefix_searcher(&mapped[i..]) {
-                            dummy += i + len + val as usize;
+                        for m in trie.common_prefix_searcher(&mapped[i..]) {
+                            dummy += i + m.end() + m.value() as usize;
                         }
                     }
                 }
@@ -72,8 +72,8 @@ fn main() {
         crawdad_common!(MpTrie, keys, texts);
     }
     {
-        println!("[crawdad/mpftrie]");
-        crawdad_common!(MpfTrie, keys, texts);
+        println!("[crawdad/fmptrie]");
+        crawdad_common!(FmpTrie, keys, texts);
     }
     {
         println!("[yada]");

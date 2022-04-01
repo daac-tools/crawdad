@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{Node, Statistics};
+use crate::{Match, Node, Statistics};
 
 use crate::END_CODE;
 
@@ -148,10 +148,11 @@ impl Trie {
     /// let mut mapped = vec![];
     /// trie.map_text("世界中で世直し", &mut mapped);
     ///
-    /// let mut iter = trie.common_prefix_searcher(&mapped[..]);
-    /// assert_eq!(iter.next(), Some((0, 2)));
-    /// assert_eq!(iter.next(), Some((1, 3)));
-    /// assert_eq!(iter.next(), None);
+    /// let mut matches = vec![];
+    /// for m in trie.common_prefix_searcher(&mapped[..]) {
+    ///     matches.push((m.value(), m.end()));
+    /// }
+    /// assert_eq!(matches, vec![(0, 2), (1, 3)]);
     /// ```
     #[inline(always)]
     pub const fn common_prefix_searcher<'k, 't>(
@@ -252,7 +253,7 @@ pub struct CommonPrefixSearcher<'k, 't> {
 }
 
 impl Iterator for CommonPrefixSearcher<'_, '_> {
-    type Item = (u32, usize);
+    type Item = Match;
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
@@ -272,10 +273,16 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
             if self.trie.is_leaf(self.node_idx) {
                 let matched_pos = self.text_pos;
                 self.text_pos = self.text.len();
-                return Some((self.trie.get_value(self.node_idx), matched_pos));
+                return Some(Match {
+                    end: matched_pos,
+                    value: self.trie.get_value(self.node_idx),
+                });
             } else if self.trie.has_leaf(self.node_idx) {
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
-                return Some((self.trie.get_value(leaf_idx), self.text_pos));
+                return Some(Match {
+                    end: self.text_pos,
+                    value: self.trie.get_value(leaf_idx),
+                });
             }
         }
         None
@@ -288,7 +295,7 @@ mod tests {
 
     #[test]
     fn test_exact_match() {
-        let keys = vec!["世界", "世界中", "世直し", "国民"];
+        let keys = vec!["世界", "世界中", "世直し", "直し中"];
         let trie = Trie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
@@ -296,22 +303,23 @@ mod tests {
         assert_eq!(trie.exact_match("世"), None);
         assert_eq!(trie.exact_match("日本"), None);
         assert_eq!(trie.exact_match("世界中で"), None);
+        assert_eq!(trie.exact_match("直し"), None);
     }
 
     #[test]
     fn test_common_prefix_search() {
-        let keys = vec!["世界", "世界中", "世直し", "国民"];
+        let keys = vec!["世界", "世界中", "世直し", "直し中"];
         let trie = Trie::from_keys(&keys).unwrap();
 
         let mut mapped = vec![];
-        trie.map_text("国民が世界中で世直し", &mut mapped);
+        trie.map_text("世界中で世直し中", &mut mapped);
 
-        let mut results = vec![];
+        let mut matches = vec![];
         for i in 0..mapped.len() {
-            for (val, pos) in trie.common_prefix_searcher(&mapped[i..]) {
-                results.push((val, i + pos));
+            for m in trie.common_prefix_searcher(&mapped[i..]) {
+                matches.push((m.value(), i + m.end()));
             }
         }
-        assert_eq!(results, vec![(3, 2), (0, 5), (1, 6), (2, 10)]);
+        assert_eq!(matches, vec![(0, 2), (1, 3), (2, 7), (3, 8)]);
     }
 }

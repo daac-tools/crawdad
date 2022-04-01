@@ -36,10 +36,31 @@ pub trait Statistics {
     }
 }
 
+/// Result of common prefix search.
+#[derive(Default, Clone, Copy)]
+pub struct Match {
+    end: usize,
+    value: u32,
+}
+
+impl Match {
+    /// Ending position of the match.
+    #[inline(always)]
+    pub const fn end(&self) -> usize {
+        self.end
+    }
+
+    /// Value associated with the matched key.
+    #[inline(always)]
+    pub const fn value(&self) -> u32 {
+        self.value
+    }
+}
+
 #[derive(Default, Clone, Copy)]
 struct Node {
-    pub(crate) base: u32,
-    pub(crate) check: u32,
+    base: u32,
+    check: u32,
 }
 
 impl Node {
