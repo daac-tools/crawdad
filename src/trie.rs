@@ -1,4 +1,4 @@
-//! Trie dictionary implementation through the reduced double-array structure.
+//! A standard trie form that often provides the fastest queries.
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
@@ -6,7 +6,7 @@ use crate::{Match, Node, Statistics};
 
 use crate::END_CODE;
 
-/// Fast trie implementation using reduced double-array structure.
+/// A standard trie form that often provides the fastest queries.
 pub struct Trie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,

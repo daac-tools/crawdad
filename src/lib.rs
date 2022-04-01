@@ -1,4 +1,8 @@
 //! 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
+//!
+//! Crawdad is a library of natural language dictionaries using character-wise double-array tries.
+//! The implementation is optimized for strings of multibyte-characters,
+//! and you can enjoy fast text processing on such strings such as Japanese or Chinese.
 mod builder;
 pub mod errors;
 pub mod fmptrie;

@@ -1,4 +1,4 @@
-//! Trie dictionary implementation through the minimal-prefix double-array structure.
+//! A minimal-prefix trie form that is memory-efficient for long strings.
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
@@ -6,7 +6,7 @@ use crate::{utils, Match, Node, Statistics};
 
 use crate::END_CODE;
 
-/// Fast trie implementation using minimal-prefix double-array structure.
+/// A minimal-prefix trie form that is memory-efficient for long strings.
 pub struct MpTrie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,

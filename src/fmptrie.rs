@@ -1,4 +1,5 @@
-//! Trie dictionary implementation through fuzzy minimal-prefix double-array structure.
+//! A fuzzy minimal-prefix trie form that is more memory-efficient
+//! and allows for some false positives (Experimental).
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
@@ -8,7 +9,8 @@ use crate::END_CODE;
 
 use sucds::RsBitVector;
 
-/// Fast trie implementation using fuzzy minimal-prefix double-array structure.
+/// A fuzzy minimal-prefix trie form that is more memory-efficient
+/// and allows for some false positives (Experimental).
 pub struct FmpTrie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,
