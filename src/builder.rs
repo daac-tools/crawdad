@@ -99,7 +99,8 @@ impl Builder {
             ..
         } = self;
 
-        let suffixes = suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
+        let suffixes =
+            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
 
         let mut tails = vec![];
 
@@ -159,7 +160,8 @@ impl Builder {
             ..
         } = self;
 
-        let suffixes = suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
+        let suffixes =
+            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
 
         let mut ranks = vec![false; nodes.len()];
         let mut auxes = vec![];
