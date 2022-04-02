@@ -60,26 +60,31 @@ impl Match {
         self.value
     }
 
-    /// Ending position of the match.
+    /// Ending position of the match in characters.
     #[inline(always)]
     pub const fn end_in_chars(&self) -> usize {
         self.end_in_chars
     }
 
-    /// Ending position of the match.
+    /// Ending position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
     pub const fn end_in_bytes(&self) -> usize {
         self.end_in_bytes
     }
 }
 
-///
+/// Handler for a mapped character.
 #[derive(Default, Clone, Copy)]
 pub struct MappedChar {
-    /// Mapped character
-    pub c: Option<u32>,
-    ///
-    pub len_utf8: usize,
+    c: Option<u32>,
+    len_utf8: usize,
+}
+
+impl MappedChar {
+    /// Returns the number of bytes the original character needs if encoded in UTF-8.
+    pub fn len_utf8(&self) -> usize {
+        self.len_utf8
+    }
 }
 
 #[derive(Default, Clone, Copy)]

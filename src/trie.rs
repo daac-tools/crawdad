@@ -151,13 +151,15 @@ impl Trie {
     /// let mut mapped = vec![];
     /// trie.map_text("国民が世界中にて", &mut mapped);
     ///
+    /// let mut j = 0;
     /// let mut matches = vec![];
     /// for i in 0..mapped.len() {
     ///     for m in trie.common_prefix_searcher(&mapped[i..]) {
-    ///         matches.push((m.value(), i + m.end_in_chars()));
+    ///         matches.push((m.value(), i + m.end_in_chars(), j + m.end_in_bytes()));
     ///     }
+    ///     j += mapped[i].len_utf8();
     /// }
-    /// assert_eq!(matches, vec![(2, 2), (0, 5), (1, 6)]);
+    /// assert_eq!(matches, vec![(2, 2, 6), (0, 5, 15), (1, 6, 18)]);
     /// ```
     #[inline(always)]
     pub const fn common_prefix_searcher<'k, 't>(
@@ -333,12 +335,14 @@ mod tests {
         let mut mapped = vec![];
         trie.map_text("世界中の統計世論調査", &mut mapped);
 
+        let mut j = 0;
         let mut matches = vec![];
         for i in 0..mapped.len() {
             for m in trie.common_prefix_searcher(&mapped[i..]) {
-                matches.push((m.value(), i + m.end_in_chars()));
+                matches.push((m.value(), i + m.end_in_chars(), j + m.end_in_bytes()));
             }
+            j += mapped[i].len_utf8();
         }
-        assert_eq!(matches, vec![(0, 2), (1, 3), (2, 10)]);
+        assert_eq!(matches, vec![(0, 2, 6), (1, 3, 9), (2, 10, 30)]);
     }
 }
