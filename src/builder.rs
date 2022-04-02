@@ -92,10 +92,6 @@ impl Builder {
     }
 
     pub fn release_mptrie(self) -> Result<MpTrie> {
-        if self.suffixes.is_none() {
-            return Err(CrawdadError::setup("minimal_prefix must be enabled."));
-        }
-
         let Builder {
             mapper,
             mut nodes,
@@ -103,8 +99,10 @@ impl Builder {
             ..
         } = self;
 
+        let suffixes =
+            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
+
         let mut tails = vec![];
-        let suffixes = suffixes.unwrap();
 
         let max_code = (mapper.alphabet_size() - 1) as u32;
         let code_size = utils::pack_size(max_code);
@@ -155,10 +153,6 @@ impl Builder {
     }
 
     pub fn release_mpftrie(self) -> Result<FmpTrie> {
-        if self.suffixes.is_none() {
-            return Err(CrawdadError::setup("minimal_prefix must be enabled."));
-        }
-
         let Builder {
             mapper,
             mut nodes,
@@ -166,10 +160,11 @@ impl Builder {
             ..
         } = self;
 
+        let suffixes =
+            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
+
         let mut ranks = vec![false; nodes.len()];
         let mut auxes = vec![];
-
-        let suffixes = suffixes.unwrap();
 
         for node_idx in 0..nodes.len() {
             if nodes[node_idx].is_vacant() {

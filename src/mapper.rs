@@ -33,12 +33,10 @@ impl CodeMapper {
 
     #[inline(always)]
     pub fn get(&self, c: char) -> Option<u32> {
-        if let Some(&code) = self.table.get(c as usize) {
-            if code != INVALID_CODE {
-                return Some(code);
-            }
-        }
-        None
+        self.table
+            .get(c as usize)
+            .copied()
+            .filter(|&code| code != INVALID_CODE)
     }
 
     #[inline]
