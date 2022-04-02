@@ -48,21 +48,42 @@ pub trait Statistics {
 /// Result of common prefix search.
 #[derive(Default, Clone, Copy)]
 pub struct Match {
-    end: usize,
     value: u32,
+    end_in_chars: usize,
+    end_in_bytes: usize,
 }
 
 impl Match {
-    /// Ending position of the match.
-    #[inline(always)]
-    pub const fn end(&self) -> usize {
-        self.end
-    }
-
     /// Value associated with the matched key.
     #[inline(always)]
     pub const fn value(&self) -> u32 {
         self.value
+    }
+
+    /// Ending position of the match in characters.
+    #[inline(always)]
+    pub const fn end_in_chars(&self) -> usize {
+        self.end_in_chars
+    }
+
+    /// Ending position of the match in bytes if characters are encoded in UTF-8.
+    #[inline(always)]
+    pub const fn end_in_bytes(&self) -> usize {
+        self.end_in_bytes
+    }
+}
+
+/// Handler for a mapped character.
+#[derive(Default, Clone, Copy)]
+pub struct MappedChar {
+    c: Option<u32>,
+    len_utf8: usize,
+}
+
+impl MappedChar {
+    /// Returns the number of bytes the original character needs if encoded in UTF-8.
+    pub const fn len_utf8(&self) -> usize {
+        self.len_utf8
     }
 }
 

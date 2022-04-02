@@ -1,6 +1,6 @@
 use crate::errors::{CrawdadError, Result};
 use crate::mapper::CodeMapper;
-use crate::{utils, FmpTrie, MpTrie, Node, Trie};
+use crate::{utils, FmpTrie, MappedChar, MpTrie, Node, Trie};
 use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
 
 use std::cmp::Ordering;
@@ -197,7 +197,14 @@ impl Builder {
             nodes[node_idx].base = suffix.value | !OFFSET_MASK;
             ranks[node_idx] = true;
 
-            let tail: Vec<_> = suffix.key.iter().map(|&c| mapper.get(c)).collect();
+            let tail: Vec<_> = suffix
+                .key
+                .iter()
+                .map(|&c| MappedChar {
+                    c: mapper.get(c),
+                    len_utf8: 0,
+                })
+                .collect();
             let tail_hash = utils::murmur_hash2(&tail).unwrap();
             auxes.push((tail.len() as u8, tail_hash as u8));
         }

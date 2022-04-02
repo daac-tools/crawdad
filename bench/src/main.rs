@@ -59,10 +59,12 @@ macro_rules! crawdad_common {
             let mut mapped = Vec::with_capacity(256);
             for text in texts {
                 trie.map_text(text, &mut mapped);
+                let mut j = 0;
                 for i in 0..mapped.len() {
                     for m in trie.common_prefix_searcher(&mapped[i..]) {
-                        dummy += i + m.end() + m.value() as usize;
+                        dummy += j + m.end_in_bytes() + m.value() as usize;
                     }
+                    j += mapped[i].len_utf8();
                 }
             }
             // Measure
@@ -70,10 +72,12 @@ macro_rules! crawdad_common {
             for _ in 0..TRIALS {
                 for text in texts {
                     trie.map_text(text, &mut mapped);
+                    let mut j = 0;
                     for i in 0..mapped.len() {
                         for m in trie.common_prefix_searcher(&mapped[i..]) {
-                            dummy += i + m.end() + m.value() as usize;
+                            dummy += j + m.end_in_bytes() + m.value() as usize;
                         }
+                        j += mapped[i].len_utf8();
                     }
                 }
             }
