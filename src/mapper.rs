@@ -13,7 +13,7 @@ impl CodeMapper {
             for (c, &f) in freqs.iter().enumerate().filter(|(_, &f)| f != 0) {
                 sorted.push((c, f));
             }
-            sorted.sort_unstable_by(|(_, f1), (_, f2)| f2.cmp(f1));
+            sorted.sort_unstable_by(|(c1, f1), (c2, f2)| f2.cmp(f1).then_with(|| c1.cmp(c2)));
             sorted
         };
         let mut table = vec![INVALID_CODE; freqs.len()];
