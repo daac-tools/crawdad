@@ -15,27 +15,21 @@ pub const fn pack_size(n: u32) -> u8 {
 }
 
 #[inline(always)]
-pub fn pack_u32(vec: &mut Vec<u8>, mut n: u32, nbytes: u8) {
-    debug_assert!((1..=4).contains(&nbytes));
-
-    for _ in 0..nbytes {
-        vec.push(n as u8);
-        n >>= 8;
-    }
+pub fn pack_u32(vec: &mut Vec<u8>, n: u32, nbytes: u8) {
+    vec.extend_from_slice(&n.to_le_bytes()[..nbytes as usize]);
 }
 
 #[inline(always)]
 pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
-    debug_assert!((1..=4).contains(&nbytes));
-
-    let mut n = 0;
-    for (i, &b) in slice[..nbytes as usize].iter().enumerate() {
-        n |= (b as u32) << (8 * i);
-    }
-    n
+    let mut n_array = [0; 4];
+    n_array[..nbytes as usize].copy_from_slice(&slice[..nbytes as usize]);
+    u32::from_le_bytes(n_array)
 }
 
 // https://github.com/aappleby/smhasher/blob/master/src/MurmurHash2.cpp
+//
+// MurmurHash2 was written by Austin Appleby, and is placed in the public
+// domain. The author hereby disclaims copyright to this source code.
 #[inline(always)]
 pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
     let seed = 0xbc9f1d34;
