@@ -141,7 +141,7 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
                 trie.map_text(text, &mut mapped);
                 for i in 0..mapped.len() {
                     for m in trie.common_prefix_searcher(&mapped[i..]) {
-                        sum += i + m.end() + m.value() as usize;
+                        sum += i + m.end_in_chars() + m.value() as usize;
                     }
                 }
             }
@@ -160,7 +160,7 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
                 trie.map_text(text, &mut mapped);
                 for i in 0..mapped.len() {
                     for m in trie.common_prefix_searcher(&mapped[i..]) {
-                        sum += i + m.end() + m.value() as usize;
+                        sum += i + m.end_in_chars() + m.value() as usize;
                     }
                 }
             }
@@ -179,7 +179,7 @@ fn add_cps_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts:
                 trie.map_text(text, &mut mapped);
                 for i in 0..mapped.len() {
                     for m in trie.common_prefix_searcher(&mapped[i..]) {
-                        sum += i + m.end() + m.value() as usize;
+                        sum += i + m.end_in_chars() + m.value() as usize;
                     }
                 }
             }
