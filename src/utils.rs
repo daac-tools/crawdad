@@ -1,3 +1,5 @@
+use crate::MappedChar;
+
 use std::cmp::Ordering;
 
 /// pack_size returns the smallest number of bytes that can encode `n`.
@@ -37,7 +39,7 @@ pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
 
 // https://github.com/aappleby/smhasher/blob/master/src/MurmurHash2.cpp
 #[inline(always)]
-pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
+pub fn murmur_hash2(key: &[MappedChar]) -> Option<u32> {
     let seed = 0xbc9f1d34;
 
     // 'm' and 'r' are mixing constants generated offline.
@@ -50,13 +52,13 @@ pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
 
     // Mix 4 bytes at a time into the hash
     for k in key {
-        if let Some(mut k) = *k {
-            k = k.wrapping_mul(m);
-            k ^= k >> r;
-            k = k.wrapping_mul(m);
+        if let Some(mut c) = k.c {
+            c = c.wrapping_mul(m);
+            c ^= c >> r;
+            c = c.wrapping_mul(m);
 
             h = h.wrapping_mul(m);
-            h ^= k;
+            h ^= c;
         } else {
             return None;
         }

@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{Match, Node, Statistics};
+use crate::{MappedChar, Match, Node, Statistics};
 
 use crate::END_CODE;
 
@@ -154,7 +154,7 @@ impl Trie {
     /// let mut matches = vec![];
     /// for i in 0..mapped.len() {
     ///     for m in trie.common_prefix_searcher(&mapped[i..]) {
-    ///         matches.push((m.value(), i + m.end()));
+    ///         matches.push((m.value(), i + m.end_in_chars()));
     ///     }
     /// }
     /// assert_eq!(matches, vec![(2, 2), (0, 5), (1, 6)]);
@@ -162,11 +162,12 @@ impl Trie {
     #[inline(always)]
     pub const fn common_prefix_searcher<'k, 't>(
         &'t self,
-        text: &'k [Option<u32>],
+        text: &'k [MappedChar],
     ) -> CommonPrefixSearcher<'k, 't> {
         CommonPrefixSearcher {
             text,
             text_pos: 0,
+            text_pos_in_bytes: 0,
             trie: self,
             node_idx: 0,
         }
@@ -179,13 +180,17 @@ impl Trie {
     /// - `text`: Search text.
     /// - `mapped`: Mapped text.
     #[inline(always)]
-    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<Option<u32>>)
+    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<MappedChar>)
     where
         K: AsRef<str>,
     {
         mapped.clear();
         for c in text.as_ref().chars() {
-            mapped.push(self.mapper.get(c));
+            let len_utf8 = c.len_utf8();
+            mapped.push(MappedChar {
+                c: self.mapper.get(c),
+                len_utf8,
+            });
         }
     }
 
@@ -251,8 +256,9 @@ impl Statistics for Trie {
 
 /// Iterator created by [`Trie::common_prefix_searcher`].
 pub struct CommonPrefixSearcher<'k, 't> {
-    text: &'k [Option<u32>],
+    text: &'k [MappedChar],
     text_pos: usize,
+    text_pos_in_bytes: usize,
     trie: &'t Trie,
     node_idx: u32,
 }
@@ -263,8 +269,9 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         while self.text_pos < self.text.len() {
-            if let Some(mc) = self.text[self.text_pos] {
-                if let Some(child_idx) = self.trie.get_child_idx(self.node_idx, mc) {
+            let mc = self.text[self.text_pos];
+            if let Some(c) = mc.c {
+                if let Some(child_idx) = self.trie.get_child_idx(self.node_idx, c) {
                     self.node_idx = child_idx;
                 } else {
                     self.text_pos = self.text.len();
@@ -274,19 +281,24 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
                 self.text_pos = self.text.len();
                 return None;
             }
+
             self.text_pos += 1;
+            self.text_pos_in_bytes += mc.len_utf8;
+
             if self.trie.is_leaf(self.node_idx) {
-                let matched_pos = self.text_pos;
+                let end_in_chars = self.text_pos;
                 self.text_pos = self.text.len();
                 return Some(Match {
-                    end: matched_pos,
                     value: self.trie.get_value(self.node_idx),
+                    end_in_chars,
+                    end_in_bytes: self.text_pos_in_bytes,
                 });
             } else if self.trie.has_leaf(self.node_idx) {
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some(Match {
-                    end: self.text_pos,
                     value: self.trie.get_value(leaf_idx),
+                    end_in_chars: self.text_pos,
+                    end_in_bytes: self.text_pos_in_bytes,
                 });
             }
         }
@@ -324,7 +336,7 @@ mod tests {
         let mut matches = vec![];
         for i in 0..mapped.len() {
             for m in trie.common_prefix_searcher(&mapped[i..]) {
-                matches.push((m.value(), i + m.end()));
+                matches.push((m.value(), i + m.end_in_chars()));
             }
         }
         assert_eq!(matches, vec![(0, 2), (1, 3), (2, 10)]);
