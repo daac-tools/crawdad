@@ -82,7 +82,7 @@ pub struct MappedChar {
 
 impl MappedChar {
     /// Returns the number of bytes the original character needs if encoded in UTF-8.
-    pub fn len_utf8(&self) -> usize {
+    pub const fn len_utf8(&self) -> usize {
         self.len_utf8
     }
 }
