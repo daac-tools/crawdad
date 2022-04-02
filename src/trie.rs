@@ -15,9 +15,12 @@ pub struct Trie {
 impl Trie {
     /// Creates a new [`Trie`] from input keys.
     ///
+    /// Values in `[0..n-1]` will be associated with keys in the lexicographical order,
+    /// where `n` is the number of keys.
+    ///
     /// # Arguments
     ///
-    /// - `keys`: List of string keys.
+    /// - `keys`: Sorted list of string keys.
     ///
     /// # Errors
     ///
@@ -35,11 +38,10 @@ impl Trie {
     /// ```
     /// use crawdad::{Trie, Statistics};
     ///
-    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(keys).unwrap();
     ///
-    /// assert_eq!(trie.num_elems(), 16);
-    /// assert_eq!(trie.num_vacants(), 7);
+    /// assert_eq!(trie.num_elems(), 8);
     /// ```
     pub fn from_keys<I, K>(keys: I) -> Result<Self>
     where
@@ -53,7 +55,7 @@ impl Trie {
     ///
     /// # Arguments
     ///
-    /// - `records`: List of pairs of a string key and an associated value.
+    /// - `records`: Sorted list of key-value pairs.
     ///
     /// # Errors
     ///
@@ -71,11 +73,10 @@ impl Trie {
     /// ```
     /// use crawdad::{Trie, Statistics};
     ///
-    /// let records = vec![("世界", 2), ("世界中", 3), ("世直し", 5), ("国民", 7)];
+    /// let records = vec![("世界", 2), ("世界中", 3), ("国民", 2)];
     /// let trie = Trie::from_records(records).unwrap();
     ///
-    /// assert_eq!(trie.num_elems(), 16);
-    /// assert_eq!(trie.num_vacants(), 7);
+    /// assert_eq!(trie.num_elems(), 8);
     /// ```
     pub fn from_records<I, K>(records: I) -> Result<Self>
     where
@@ -96,7 +97,7 @@ impl Trie {
     /// ```
     /// use crawdad::Trie;
     ///
-    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
     /// assert_eq!(trie.exact_match("世界中"), Some(1));
@@ -131,7 +132,7 @@ impl Trie {
     /// Returns an iterator for common prefix search.
     ///
     /// This operation finds all occurrences of keys starting from a search text, and
-    /// the occurrences are reported as pairs of value and end position.
+    /// the occurrences are reported as a sequence of [`Match`](crate::Match).
     ///
     /// # Arguments
     ///
@@ -144,11 +145,11 @@ impl Trie {
     /// ```
     /// use crawdad::Trie;
     ///
-    /// let keys = vec!["世界", "世界中", "世直し", "国民"];
+    /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
     /// let mut mapped = vec![];
-    /// trie.map_text("国民が世界中で世直し", &mut mapped);
+    /// trie.map_text("国民が世界中にて", &mut mapped);
     ///
     /// let mut matches = vec![];
     /// for i in 0..mapped.len() {
@@ -156,7 +157,7 @@ impl Trie {
     ///         matches.push((m.value(), i + m.end()));
     ///     }
     /// }
-    /// assert_eq!(matches, vec![(3, 2), (0, 5), (1, 6), (2, 10)]);
+    /// assert_eq!(matches, vec![(2, 2), (0, 5), (1, 6)]);
     /// ```
     #[inline(always)]
     pub const fn common_prefix_searcher<'k, 't>(
@@ -299,24 +300,26 @@ mod tests {
 
     #[test]
     fn test_exact_match() {
-        let keys = vec!["世界", "世界中", "世直し", "直し中"];
+        let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
             assert_eq!(trie.exact_match(&key), Some(i as u32));
         }
         assert_eq!(trie.exact_match("世"), None);
-        assert_eq!(trie.exact_match("日本"), None);
+        assert_eq!(trie.exact_match("世論"), None);
         assert_eq!(trie.exact_match("世界中で"), None);
-        assert_eq!(trie.exact_match("直し"), None);
+        assert_eq!(trie.exact_match("統計"), None);
+        assert_eq!(trie.exact_match("統計調"), None);
+        assert_eq!(trie.exact_match("日本"), None);
     }
 
     #[test]
     fn test_common_prefix_search() {
-        let keys = vec!["世界", "世界中", "世直し", "直し中"];
+        let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
 
         let mut mapped = vec![];
-        trie.map_text("世界中で世直し中", &mut mapped);
+        trie.map_text("世界中の統計世論調査", &mut mapped);
 
         let mut matches = vec![];
         for i in 0..mapped.len() {
@@ -324,6 +327,6 @@ mod tests {
                 matches.push((m.value(), i + m.end()));
             }
         }
-        assert_eq!(matches, vec![(0, 2), (1, 3), (2, 7), (3, 8)]);
+        assert_eq!(matches, vec![(0, 2), (1, 3), (2, 10)]);
     }
 }
