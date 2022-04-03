@@ -516,20 +516,14 @@ fn make_prefix_free(records: &mut [Record]) -> Result<()> {
 }
 
 fn pop_end_marker(x: &[char]) -> Vec<char> {
-    let mut x = x.to_vec();
-    if let Some(&c) = x.last() {
-        if c == END_MARKER {
-            x.pop();
-        }
+    match x.split_last() {
+        Some((&END_MARKER, elems)) => elems.to_vec(),
+        _ => x.to_vec(),
     }
-    x
 }
 
 const fn get_block_len(alphabet_size: u32) -> u32 {
     let max_code = alphabet_size - 1;
-    let mut shift = 1;
-    while (max_code >> shift) != 0 {
-        shift += 1;
-    }
+    let shift = 32 - max_code.leading_zeros();
     1 << shift
 }
