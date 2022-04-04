@@ -169,7 +169,7 @@ impl Trie {
     pub fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
         CommonPrefixSearcher {
             trie: self,
-            haystack: Vec::with_capacity(256),
+            haystack: vec![],
         }
     }
 
