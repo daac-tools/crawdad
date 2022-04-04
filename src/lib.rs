@@ -16,6 +16,8 @@ mod mapper;
 pub mod trie;
 mod utils;
 
+use std::ops::Range;
+
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
 pub(crate) const INVALID_IDX: u32 = 0xffff_ffff;
 pub(crate) const MAX_VALUE: u32 = OFFSET_MASK;
@@ -46,11 +48,11 @@ pub trait Statistics {
 }
 
 /// Result of common prefix search.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone)]
 pub struct Match {
     value: u32,
-    range_chars: (usize, usize),
-    range_bytes: (usize, usize),
+    range_chars: Range<usize>,
+    range_bytes: Range<usize>,
 }
 
 impl Match {
@@ -63,25 +65,25 @@ impl Match {
     /// Starting position of the match in characters.
     #[inline(always)]
     pub const fn start_chars(&self) -> usize {
-        self.range_chars.0
+        self.range_chars.start
     }
 
     /// Ending position of the match in characters.
     #[inline(always)]
     pub const fn end_chars(&self) -> usize {
-        self.range_chars.1
+        self.range_chars.end
     }
 
     /// Starting position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
     pub const fn start_bytes(&self) -> usize {
-        self.range_bytes.0
+        self.range_bytes.start
     }
 
     /// Ending position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
     pub const fn end_bytes(&self) -> usize {
-        self.range_bytes.1
+        self.range_bytes.end
     }
 }
 

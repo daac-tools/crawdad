@@ -331,8 +331,8 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
                 self.haystack_pos = self.haystack.len();
                 return Some(Match {
                     value: self.trie.get_value(self.node_idx),
-                    range_chars: (self.start_chars, end_chars),
-                    range_bytes: (self.start_bytes, end_bytes),
+                    range_chars: self.start_chars..end_chars,
+                    range_bytes: self.start_bytes..end_bytes,
                 });
             } else if self.trie.has_leaf(self.node_idx) {
                 let end_chars = self.haystack_pos;
@@ -340,8 +340,8 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some(Match {
                     value: self.trie.get_value(leaf_idx),
-                    range_chars: (self.start_chars, end_chars),
-                    range_bytes: (self.start_bytes, end_bytes),
+                    range_chars: self.start_chars..end_chars,
+                    range_bytes: self.start_bytes..end_bytes,
                 });
             }
         }
