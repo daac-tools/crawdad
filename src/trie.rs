@@ -133,12 +133,12 @@ impl Trie {
 
     /// Returns a common prefix searcher.
     ///
-    /// The searcher finds all occurrences of keys starting from an input text, and
+    /// The searcher finds all occurrences of keys starting from an input haystack, and
     /// the occurrences are reported as a sequence of [`Match`](crate::Match).
     ///
     /// # Examples
     ///
-    /// You can find all occurrences of keys in a text as follows.
+    /// You can find all occurrences of keys in a haystack as follows.
     ///
     /// ```
     /// use crawdad::Trie;
@@ -147,11 +147,11 @@ impl Trie {
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
     /// let mut searcher = trie.common_prefix_searcher();
-    /// searcher.set_text("国民が世界中にて");
+    /// searcher.update_haystack("国民が世界中にて");
     ///
     /// let mut matches = vec![];
-    /// for i in 0..searcher.text_len() {
-    ///     for m in searcher.iter(i..) {
+    /// for i in 0..searcher.len_chars() {
+    ///     for m in searcher.search(i..) {
     ///         matches.push((
     ///             m.value(),
     ///             m.start_in_chars(), m.end_in_chars(),
@@ -169,24 +169,24 @@ impl Trie {
     pub fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
         CommonPrefixSearcher {
             trie: self,
-            text: Vec::with_capacity(256),
+            haystack: Vec::with_capacity(256),
         }
     }
 
-    /// Prepares a search text for common prefix search.
+    /// Prepares a search haystack for common prefix search.
     ///
     /// # Arguments
     ///
-    /// - `text`: Search text.
-    /// - `mapped`: Mapped text.
+    /// - `haystack`: Search haystack.
+    /// - `mapped`: Mapped haystack.
     #[inline(always)]
-    fn map_text<K>(&self, text: K, mapped: &mut Vec<MappedChar>)
+    fn map_haystack<K>(&self, haystack: K, mapped: &mut Vec<MappedChar>)
     where
         K: AsRef<str>,
     {
         mapped.clear();
         let mut end_in_bytes = 0;
-        for c in text.as_ref().chars() {
+        for c in haystack.as_ref().chars() {
             end_in_bytes += c.len_utf8();
             mapped.push(MappedChar {
                 c: self.mapper.get(c),
@@ -258,34 +258,34 @@ impl Statistics for Trie {
 /// Common prefix searcher created by [`Trie::common_prefix_searcher`].
 pub struct CommonPrefixSearcher<'t> {
     trie: &'t Trie,
-    text: Vec<MappedChar>,
+    haystack: Vec<MappedChar>,
 }
 
 impl CommonPrefixSearcher<'_> {
-    /// Sets a search text.
-    pub fn set_text<K>(&mut self, text: K)
+    /// Sets a search haystack.
+    pub fn update_haystack<K>(&mut self, haystack: K)
     where
         K: AsRef<str>,
     {
-        self.trie.map_text(text, &mut self.text);
+        self.trie.map_haystack(haystack, &mut self.haystack);
     }
 
-    /// Gets the text length in characters.
-    pub fn text_len(&self) -> usize {
-        self.text.len()
+    /// Gets the haystack length in characters.
+    pub fn len_chars(&self) -> usize {
+        self.haystack.len()
     }
 
-    /// Creates an iterator to search for the text in the given range.
+    /// Creates an iterator to search for the haystack in the given range.
     pub fn search(&self, rng: RangeFrom<usize>) -> CommonPrefixSearchIter {
         let start_in_chars = rng.start;
         let start_in_bytes = if start_in_chars == 0 {
             0
         } else {
-            self.text[start_in_chars - 1].end_in_bytes
+            self.haystack[start_in_chars - 1].end_in_bytes
         };
         CommonPrefixSearchIter {
-            text: &self.text,
-            text_pos: start_in_chars,
+            haystack: &self.haystack,
+            haystack_pos: start_in_chars,
             trie: self.trie,
             node_idx: 0,
             start_in_chars,
@@ -296,8 +296,8 @@ impl CommonPrefixSearcher<'_> {
 
 /// Iterator for common prefix search.
 pub struct CommonPrefixSearchIter<'k, 't> {
-    text: &'k [MappedChar],
-    text_pos: usize,
+    haystack: &'k [MappedChar],
+    haystack_pos: usize,
     trie: &'t Trie,
     node_idx: u32,
     start_in_chars: usize,
@@ -309,34 +309,34 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.text_pos < self.text.len() {
-            let mc = self.text[self.text_pos];
+        while self.haystack_pos < self.haystack.len() {
+            let mc = self.haystack[self.haystack_pos];
             if let Some(c) = mc.c {
                 if let Some(child_idx) = self.trie.get_child_idx(self.node_idx, c) {
                     self.node_idx = child_idx;
                 } else {
-                    self.text_pos = self.text.len();
+                    self.haystack_pos = self.haystack.len();
                     return None;
                 }
             } else {
-                self.text_pos = self.text.len();
+                self.haystack_pos = self.haystack.len();
                 return None;
             }
 
-            self.text_pos += 1;
+            self.haystack_pos += 1;
 
             if self.trie.is_leaf(self.node_idx) {
-                let end_in_chars = self.text_pos;
-                let end_in_bytes = self.text[end_in_chars - 1].end_in_bytes;
-                self.text_pos = self.text.len();
+                let end_in_chars = self.haystack_pos;
+                let end_in_bytes = self.haystack[end_in_chars - 1].end_in_bytes;
+                self.haystack_pos = self.haystack.len();
                 return Some(Match {
                     value: self.trie.get_value(self.node_idx),
                     range_in_chars: (self.start_in_chars, end_in_chars),
                     range_in_bytes: (self.start_in_bytes, end_in_bytes),
                 });
             } else if self.trie.has_leaf(self.node_idx) {
-                let end_in_chars = self.text_pos;
-                let end_in_bytes = self.text[end_in_chars - 1].end_in_bytes;
+                let end_in_chars = self.haystack_pos;
+                let end_in_bytes = self.haystack[end_in_chars - 1].end_in_bytes;
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some(Match {
                     value: self.trie.get_value(leaf_idx),
@@ -374,11 +374,11 @@ mod tests {
         let trie = Trie::from_keys(&keys).unwrap();
 
         let mut searcher = trie.common_prefix_searcher();
-        searcher.set_text("世界中の統計世論調査");
+        searcher.update_haystack("世界中の統計世論調査");
 
         let mut matches = vec![];
-        for i in 0..searcher.text_len() {
-            for m in searcher.iter(i..) {
+        for i in 0..searcher.len_chars() {
+            for m in searcher.search(i..) {
                 matches.push((
                     m.value(),
                     m.start_in_chars(),
