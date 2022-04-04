@@ -276,7 +276,7 @@ impl CommonPrefixSearcher<'_> {
     }
 
     /// Creates an iterator to search for the text in the given range.
-    pub fn iter(&self, rng: RangeFrom<usize>) -> CommonPrefixSearchIter {
+    pub fn search(&self, rng: RangeFrom<usize>) -> CommonPrefixSearchIter {
         let start_in_chars = rng.start;
         let start_in_bytes = if start_in_chars == 0 {
             0
