@@ -1,4 +1,6 @@
 //! A standard trie form that often provides the fastest queries.
+use std::ops::RangeFrom;
+
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
@@ -129,18 +131,14 @@ impl Trie {
         }
     }
 
-    /// Returns an iterator for common prefix search.
+    /// Returns a common prefix searcher.
     ///
-    /// This operation finds all occurrences of keys starting from a search text, and
+    /// The searcher finds all occurrences of keys starting from an input text, and
     /// the occurrences are reported as a sequence of [`Match`](crate::Match).
-    ///
-    /// # Arguments
-    ///
-    /// - `text`: Search text mapped by [`Trie::map_text`].
     ///
     /// # Examples
     ///
-    /// You can find all occurrences  of keys in a text as follows.
+    /// You can find all occurrences of keys in a text as follows.
     ///
     /// ```
     /// use crawdad::Trie;
@@ -148,30 +146,30 @@ impl Trie {
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
-    /// let mut mapped = vec![];
-    /// trie.map_text("国民が世界中にて", &mut mapped);
+    /// let mut searcher = trie.common_prefix_searcher();
+    /// searcher.set_text("国民が世界中にて");
     ///
-    /// let mut j = 0;
     /// let mut matches = vec![];
-    /// for i in 0..mapped.len() {
-    ///     for m in trie.common_prefix_searcher(&mapped[i..]) {
-    ///         matches.push((m.value(), i + m.end_in_chars(), j + m.end_in_bytes()));
+    /// for i in 0..searcher.text_len() {
+    ///     for m in searcher.iter(i..) {
+    ///         matches.push((
+    ///             m.value(),
+    ///             m.start_in_chars(), m.end_in_chars(),
+    ///             m.start_in_bytes(), m.end_in_bytes(),
+    ///         ));
     ///     }
-    ///     j += mapped[i].len_utf8();
     /// }
-    /// assert_eq!(matches, vec![(2, 2, 6), (0, 5, 15), (1, 6, 18)]);
+    ///
+    /// assert_eq!(
+    ///     matches,
+    ///     vec![(2, 0, 2, 0, 6), (0, 3, 5, 9, 15), (1, 3, 6, 9, 18)]
+    /// );
     /// ```
     #[inline(always)]
-    pub const fn common_prefix_searcher<'k, 't>(
-        &'t self,
-        text: &'k [MappedChar],
-    ) -> CommonPrefixSearcher<'k, 't> {
+    pub fn common_prefix_searcher<'t>(&'t self) -> CommonPrefixSearcher<'t> {
         CommonPrefixSearcher {
-            text,
-            text_pos: 0,
-            text_pos_in_bytes: 0,
             trie: self,
-            node_idx: 0,
+            text: Vec::with_capacity(256),
         }
     }
 
@@ -182,16 +180,17 @@ impl Trie {
     /// - `text`: Search text.
     /// - `mapped`: Mapped text.
     #[inline(always)]
-    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<MappedChar>)
+    fn map_text<K>(&self, text: K, mapped: &mut Vec<MappedChar>)
     where
         K: AsRef<str>,
     {
         mapped.clear();
+        let mut end_in_bytes = 0;
         for c in text.as_ref().chars() {
-            let len_utf8 = c.len_utf8();
+            end_in_bytes += c.len_utf8();
             mapped.push(MappedChar {
                 c: self.mapper.get(c),
-                len_utf8,
+                end_in_bytes,
             });
         }
     }
@@ -256,16 +255,56 @@ impl Statistics for Trie {
     }
 }
 
-/// Iterator created by [`Trie::common_prefix_searcher`].
-pub struct CommonPrefixSearcher<'k, 't> {
-    text: &'k [MappedChar],
-    text_pos: usize,
-    text_pos_in_bytes: usize,
+/// Common prefix searcher created by [`Trie::common_prefix_searcher`].
+pub struct CommonPrefixSearcher<'t> {
     trie: &'t Trie,
-    node_idx: u32,
+    text: Vec<MappedChar>,
 }
 
-impl Iterator for CommonPrefixSearcher<'_, '_> {
+impl CommonPrefixSearcher<'_> {
+    /// Sets a search text.
+    pub fn set_text<K>(&mut self, text: K)
+    where
+        K: AsRef<str>,
+    {
+        self.trie.map_text(text, &mut self.text);
+    }
+
+    /// Gets the text length in characters.
+    pub fn text_len(&self) -> usize {
+        self.text.len()
+    }
+
+    /// Creates an iterator to search for the text in the given range.
+    pub fn iter(&self, rng: RangeFrom<usize>) -> CommonPrefixSearchIter {
+        let start_in_chars = rng.start;
+        let start_in_bytes = if start_in_chars == 0 {
+            0
+        } else {
+            self.text[start_in_chars - 1].end_in_bytes
+        };
+        CommonPrefixSearchIter {
+            text: &self.text,
+            text_pos: start_in_chars,
+            trie: self.trie,
+            node_idx: 0,
+            start_in_chars,
+            start_in_bytes,
+        }
+    }
+}
+
+/// Iterator for common prefix search.
+pub struct CommonPrefixSearchIter<'k, 't> {
+    text: &'k [MappedChar],
+    text_pos: usize,
+    trie: &'t Trie,
+    node_idx: u32,
+    start_in_chars: usize,
+    start_in_bytes: usize,
+}
+
+impl Iterator for CommonPrefixSearchIter<'_, '_> {
     type Item = Match;
 
     #[inline(always)]
@@ -285,22 +324,24 @@ impl Iterator for CommonPrefixSearcher<'_, '_> {
             }
 
             self.text_pos += 1;
-            self.text_pos_in_bytes += mc.len_utf8;
 
             if self.trie.is_leaf(self.node_idx) {
                 let end_in_chars = self.text_pos;
+                let end_in_bytes = self.text[end_in_chars - 1].end_in_bytes;
                 self.text_pos = self.text.len();
                 return Some(Match {
                     value: self.trie.get_value(self.node_idx),
-                    end_in_chars,
-                    end_in_bytes: self.text_pos_in_bytes,
+                    range_in_chars: (self.start_in_chars, end_in_chars),
+                    range_in_bytes: (self.start_in_bytes, end_in_bytes),
                 });
             } else if self.trie.has_leaf(self.node_idx) {
+                let end_in_chars = self.text_pos;
+                let end_in_bytes = self.text[end_in_chars - 1].end_in_bytes;
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some(Match {
                     value: self.trie.get_value(leaf_idx),
-                    end_in_chars: self.text_pos,
-                    end_in_bytes: self.text_pos_in_bytes,
+                    range_in_chars: (self.start_in_chars, end_in_chars),
+                    range_in_bytes: (self.start_in_bytes, end_in_bytes),
                 });
             }
         }
@@ -332,17 +373,25 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
 
-        let mut mapped = vec![];
-        trie.map_text("世界中の統計世論調査", &mut mapped);
+        let mut searcher = trie.common_prefix_searcher();
+        searcher.set_text("世界中の統計世論調査");
 
-        let mut j = 0;
         let mut matches = vec![];
-        for i in 0..mapped.len() {
-            for m in trie.common_prefix_searcher(&mapped[i..]) {
-                matches.push((m.value(), i + m.end_in_chars(), j + m.end_in_bytes()));
+        for i in 0..searcher.text_len() {
+            for m in searcher.iter(i..) {
+                matches.push((
+                    m.value(),
+                    m.start_in_chars(),
+                    m.end_in_chars(),
+                    m.start_in_bytes(),
+                    m.end_in_bytes(),
+                ));
             }
-            j += mapped[i].len_utf8();
         }
-        assert_eq!(matches, vec![(0, 2, 6), (1, 3, 9), (2, 10, 30)]);
+
+        assert_eq!(
+            matches,
+            vec![(0, 0, 2, 0, 6), (1, 0, 3, 0, 9), (2, 6, 10, 18, 30)]
+        );
     }
 }

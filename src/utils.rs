@@ -33,7 +33,7 @@ pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
 // MurmurHash2 was written by Austin Appleby, and is placed in the public
 // domain. The author hereby disclaims copyright to this source code.
 #[inline(always)]
-pub fn murmur_hash2(key: &[MappedChar]) -> Option<u32> {
+fn murmur_hash2(key: &[MappedChar]) -> Option<u32> {
     let seed = 0xbc9f1d34;
 
     // 'm' and 'r' are mixing constants generated offline.

@@ -10,9 +10,9 @@ compile_error!("`target_pointer_width` must be larger than or equal to 32");
 
 mod builder;
 pub mod errors;
-pub mod fmptrie;
+// pub mod fmptrie;
 mod mapper;
-pub mod mptrie;
+// pub mod mptrie;
 pub mod trie;
 mod utils;
 
@@ -24,8 +24,8 @@ pub(crate) const END_CODE: u32 = 0;
 /// Special terminator, which must not be contained in keys.
 pub const END_MARKER: char = '\u{0}';
 
-pub use fmptrie::FmpTrie;
-pub use mptrie::MpTrie;
+// pub use fmptrie::FmpTrie;
+// pub use mptrie::MpTrie;
 pub use trie::Trie;
 
 /// Basic statistics of trie.
@@ -49,8 +49,8 @@ pub trait Statistics {
 #[derive(Default, Clone, Copy)]
 pub struct Match {
     value: u32,
-    end_in_chars: usize,
-    end_in_bytes: usize,
+    range_in_chars: (usize, usize),
+    range_in_bytes: (usize, usize),
 }
 
 impl Match {
@@ -60,31 +60,36 @@ impl Match {
         self.value
     }
 
+    /// Starting position of the match in characters.
+    #[inline(always)]
+    pub const fn start_in_chars(&self) -> usize {
+        self.range_in_chars.0
+    }
+
     /// Ending position of the match in characters.
     #[inline(always)]
     pub const fn end_in_chars(&self) -> usize {
-        self.end_in_chars
+        self.range_in_chars.1
+    }
+
+    /// Starting position of the match in bytes if characters are encoded in UTF-8.
+    #[inline(always)]
+    pub const fn start_in_bytes(&self) -> usize {
+        self.range_in_bytes.0
     }
 
     /// Ending position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
     pub const fn end_in_bytes(&self) -> usize {
-        self.end_in_bytes
+        self.range_in_bytes.1
     }
 }
 
 /// Handler for a mapped character.
 #[derive(Default, Clone, Copy)]
-pub struct MappedChar {
+struct MappedChar {
     c: Option<u32>,
-    len_utf8: usize,
-}
-
-impl MappedChar {
-    /// Returns the number of bytes the original character needs if encoded in UTF-8.
-    pub const fn len_utf8(&self) -> usize {
-        self.len_utf8
-    }
+    end_in_bytes: usize,
 }
 
 #[derive(Default, Clone, Copy)]

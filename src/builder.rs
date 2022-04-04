@@ -1,6 +1,7 @@
 use crate::errors::{CrawdadError, Result};
 use crate::mapper::CodeMapper;
-use crate::{utils, FmpTrie, MappedChar, MpTrie, Node, Trie};
+// use crate::{utils, FmpTrie, MappedChar, MpTrie, Node, Trie};
+use crate::{utils, MappedChar, Node, Trie};
 use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
 
 use std::cmp::Ordering;
@@ -91,126 +92,126 @@ impl Builder {
         }
     }
 
-    pub fn release_mptrie(self) -> Result<MpTrie> {
-        let Builder {
-            mapper,
-            mut nodes,
-            suffixes,
-            ..
-        } = self;
+    // pub fn release_mptrie(self) -> Result<MpTrie> {
+    //     let Builder {
+    //         mapper,
+    //         mut nodes,
+    //         suffixes,
+    //         ..
+    //     } = self;
 
-        let suffixes =
-            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
+    //     let suffixes =
+    //         suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
 
-        let mut tails = vec![];
+    //     let mut tails = vec![];
 
-        let max_code = (mapper.alphabet_size() - 1) as u32;
-        let code_size = utils::pack_size(max_code);
+    //     let max_code = (mapper.alphabet_size() - 1) as u32;
+    //     let code_size = utils::pack_size(max_code);
 
-        let max_value = suffixes.iter().map(|s| s.value).max().unwrap();
-        let value_size = utils::pack_size(max_value);
+    //     let max_value = suffixes.iter().map(|s| s.value).max().unwrap();
+    //     let value_size = utils::pack_size(max_value);
 
-        for node_idx in 0..nodes.len() {
-            if nodes[node_idx].is_vacant() {
-                continue;
-            }
-            if !nodes[node_idx].is_leaf() {
-                continue;
-            }
+    //     for node_idx in 0..nodes.len() {
+    //         if nodes[node_idx].is_vacant() {
+    //             continue;
+    //         }
+    //         if !nodes[node_idx].is_leaf() {
+    //             continue;
+    //         }
 
-            debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
-            let parent_idx = nodes[node_idx].check as usize;
-            let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
-            let suffix = &suffixes[suf_idx];
+    //         debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
+    //         let parent_idx = nodes[node_idx].check as usize;
+    //         let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
+    //         let suffix = &suffixes[suf_idx];
 
-            // HasLeaf?
-            if nodes[parent_idx].has_leaf() {
-                // `node_idx` is indicated from `parent_idx` with END_CODE?
-                if nodes[parent_idx].base == node_idx as u32 {
-                    assert!(suffix.key.is_empty());
-                    nodes[node_idx].base = suffix.value | !OFFSET_MASK;
-                    continue;
-                }
-            }
+    //         // HasLeaf?
+    //         if nodes[parent_idx].has_leaf() {
+    //             // `node_idx` is indicated from `parent_idx` with END_CODE?
+    //             if nodes[parent_idx].base == node_idx as u32 {
+    //                 assert!(suffix.key.is_empty());
+    //                 nodes[node_idx].base = suffix.value | !OFFSET_MASK;
+    //                 continue;
+    //             }
+    //         }
 
-            nodes[node_idx].base = tails.len() as u32 | !OFFSET_MASK;
-            tails.push(suffix.key.len() as u8);
-            suffix
-                .key
-                .iter()
-                .map(|&c| mapper.get(c).unwrap())
-                .for_each(|c| utils::pack_u32(&mut tails, c, code_size));
-            utils::pack_u32(&mut tails, suffix.value, value_size);
-        }
+    //         nodes[node_idx].base = tails.len() as u32 | !OFFSET_MASK;
+    //         tails.push(suffix.key.len() as u8);
+    //         suffix
+    //             .key
+    //             .iter()
+    //             .map(|&c| mapper.get(c).unwrap())
+    //             .for_each(|c| utils::pack_u32(&mut tails, c, code_size));
+    //         utils::pack_u32(&mut tails, suffix.value, value_size);
+    //     }
 
-        Ok(MpTrie {
-            mapper,
-            nodes,
-            tails,
-            code_size,
-            value_size,
-        })
-    }
+    //     Ok(MpTrie {
+    //         mapper,
+    //         nodes,
+    //         tails,
+    //         code_size,
+    //         value_size,
+    //     })
+    // }
 
-    pub fn release_mpftrie(self) -> Result<FmpTrie> {
-        let Builder {
-            mapper,
-            mut nodes,
-            suffixes,
-            ..
-        } = self;
+    // pub fn release_mpftrie(self) -> Result<FmpTrie> {
+    //     let Builder {
+    //         mapper,
+    //         mut nodes,
+    //         suffixes,
+    //         ..
+    //     } = self;
 
-        let suffixes =
-            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
+    //     let suffixes =
+    //         suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
 
-        let mut ranks = vec![false; nodes.len()];
-        let mut auxes = vec![];
+    //     let mut ranks = vec![false; nodes.len()];
+    //     let mut auxes = vec![];
 
-        for node_idx in 0..nodes.len() {
-            if nodes[node_idx].is_vacant() {
-                continue;
-            }
-            if !nodes[node_idx].is_leaf() {
-                continue;
-            }
+    //     for node_idx in 0..nodes.len() {
+    //         if nodes[node_idx].is_vacant() {
+    //             continue;
+    //         }
+    //         if !nodes[node_idx].is_leaf() {
+    //             continue;
+    //         }
 
-            debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
-            let parent_idx = nodes[node_idx].check as usize;
-            let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
-            let suffix = &suffixes[suf_idx];
+    //         debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
+    //         let parent_idx = nodes[node_idx].check as usize;
+    //         let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
+    //         let suffix = &suffixes[suf_idx];
 
-            // HasLeaf?
-            if nodes[parent_idx].has_leaf() {
-                // `node_idx` is indicated from `parent_idx` with END_CODE?
-                if nodes[parent_idx].base == node_idx as u32 {
-                    assert!(suffix.key.is_empty());
-                    nodes[node_idx].base = suffix.value | !OFFSET_MASK;
-                    continue;
-                }
-            }
+    //         // HasLeaf?
+    //         if nodes[parent_idx].has_leaf() {
+    //             // `node_idx` is indicated from `parent_idx` with END_CODE?
+    //             if nodes[parent_idx].base == node_idx as u32 {
+    //                 assert!(suffix.key.is_empty());
+    //                 nodes[node_idx].base = suffix.value | !OFFSET_MASK;
+    //                 continue;
+    //             }
+    //         }
 
-            nodes[node_idx].base = suffix.value | !OFFSET_MASK;
-            ranks[node_idx] = true;
+    //         nodes[node_idx].base = suffix.value | !OFFSET_MASK;
+    //         ranks[node_idx] = true;
 
-            let tail: Vec<_> = suffix
-                .key
-                .iter()
-                .map(|&c| MappedChar {
-                    c: mapper.get(c),
-                    len_utf8: 0,
-                })
-                .collect();
-            let tail_hash = utils::murmur_hash2(&tail).unwrap();
-            auxes.push((tail.len() as u8, tail_hash as u8));
-        }
+    //         let tail: Vec<_> = suffix
+    //             .key
+    //             .iter()
+    //             .map(|&c| MappedChar {
+    //                 c: mapper.get(c),
+    //                 len_utf8: 0,
+    //             })
+    //             .collect();
+    //         let tail_hash = utils::murmur_hash2(&tail).unwrap();
+    //         auxes.push((tail.len() as u8, tail_hash as u8));
+    //     }
 
-        Ok(FmpTrie {
-            mapper,
-            nodes,
-            ranks: RsBitVector::from_bits(ranks),
-            auxes,
-        })
-    }
+    //     Ok(FmpTrie {
+    //         mapper,
+    //         nodes,
+    //         ranks: RsBitVector::from_bits(ranks),
+    //         auxes,
+    //     })
+    // }
 
     #[inline(always)]
     fn num_nodes(&self) -> u32 {
