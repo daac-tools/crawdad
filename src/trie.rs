@@ -100,16 +100,16 @@ impl Trie {
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
-    /// assert_eq!(trie.exact_match("世界中"), Some(1));
-    /// assert_eq!(trie.exact_match("日本中"), None);
+    /// assert_eq!(trie.exact_match("世界中".chars()), Some(1));
+    /// assert_eq!(trie.exact_match("日本中".chars()), None);
     /// ```
     #[inline(always)]
-    pub fn exact_match<K>(&self, key: K) -> Option<u32>
+    pub fn exact_match<I>(&self, key: I) -> Option<u32>
     where
-        K: AsRef<str>,
+        I: IntoIterator<Item = char>,
     {
         let mut node_idx = 0;
-        for c in key.as_ref().chars() {
+        for c in key {
             if let Some(mc) = self.mapper.get(c) {
                 if let Some(child_idx) = self.get_child_idx(node_idx, mc) {
                     node_idx = child_idx;
@@ -145,7 +145,7 @@ impl Trie {
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
     /// let mut searcher = trie.common_prefix_searcher();
-    /// searcher.update_haystack("国民が世界中にて");
+    /// searcher.update_haystack("国民が世界中にて".chars());
     ///
     /// let mut matches = vec![];
     /// for i in 0..searcher.len_chars() {
@@ -178,13 +178,13 @@ impl Trie {
     /// - `haystack`: Search haystack.
     /// - `mapped`: Mapped haystack.
     #[inline(always)]
-    fn map_haystack<K>(&self, haystack: K, mapped: &mut Vec<MappedChar>)
+    fn map_haystack<I>(&self, haystack: I, mapped: &mut Vec<MappedChar>)
     where
-        K: AsRef<str>,
+        I: IntoIterator<Item = char>,
     {
         mapped.clear();
         let mut end_bytes = 0;
-        for c in haystack.as_ref().chars() {
+        for c in haystack {
             end_bytes += c.len_utf8();
             mapped.push(MappedChar {
                 c: self.mapper.get(c),
@@ -261,9 +261,9 @@ pub struct CommonPrefixSearcher<'t> {
 
 impl CommonPrefixSearcher<'_> {
     /// Sets a search haystack.
-    pub fn update_haystack<K>(&mut self, haystack: K)
+    pub fn update_haystack<I>(&mut self, haystack: I)
     where
-        K: AsRef<str>,
+        I: IntoIterator<Item = char>,
     {
         self.trie.map_haystack(haystack, &mut self.haystack);
     }
@@ -356,14 +356,14 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
-            assert_eq!(trie.exact_match(&key), Some(i as u32));
+            assert_eq!(trie.exact_match(key.chars()), Some(i as u32));
         }
-        assert_eq!(trie.exact_match("世"), None);
-        assert_eq!(trie.exact_match("世論"), None);
-        assert_eq!(trie.exact_match("世界中で"), None);
-        assert_eq!(trie.exact_match("統計"), None);
-        assert_eq!(trie.exact_match("統計調"), None);
-        assert_eq!(trie.exact_match("日本"), None);
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世論".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("統計".chars()), None);
+        assert_eq!(trie.exact_match("統計調".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
     }
 
     #[test]
@@ -372,7 +372,7 @@ mod tests {
         let trie = Trie::from_keys(&keys).unwrap();
 
         let mut searcher = trie.common_prefix_searcher();
-        searcher.update_haystack("世界中の統計世論調査");
+        searcher.update_haystack("世界中の統計世論調査".chars());
 
         let mut matches = vec![];
         for i in 0..searcher.len_chars() {
