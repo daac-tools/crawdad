@@ -166,7 +166,7 @@ impl Trie {
     /// );
     /// ```
     #[inline(always)]
-    pub fn common_prefix_searcher<'t>(&'t self) -> CommonPrefixSearcher<'t> {
+    pub fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
         CommonPrefixSearcher {
             trie: self,
             text: Vec::with_capacity(256),

@@ -1,12 +1,13 @@
 use crate::errors::{CrawdadError, Result};
 use crate::mapper::CodeMapper;
 // use crate::{utils, FmpTrie, MappedChar, MpTrie, Node, Trie};
-use crate::{utils, MappedChar, Node, Trie};
+// use crate::{utils, MappedChar, Node, Trie};
+use crate::{utils, Node, Trie};
 use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
 
 use std::cmp::Ordering;
 
-use sucds::RsBitVector;
+// use sucds::RsBitVector;
 
 #[derive(Default)]
 struct Record {
@@ -36,11 +37,11 @@ impl Builder {
         Self::default()
     }
 
-    #[allow(clippy::missing_const_for_fn)]
-    pub fn minimal_prefix(mut self) -> Self {
-        self.suffixes = Some(vec![]);
-        self
-    }
+    // #[allow(clippy::missing_const_for_fn)]
+    // pub fn minimal_prefix(mut self) -> Self {
+    //     self.suffixes = Some(vec![]);
+    //     self
+    // }
 
     pub fn build_from_keys<I, K>(self, keys: I) -> Result<Self>
     where
