@@ -49,8 +49,8 @@ pub trait Statistics {
 #[derive(Default, Clone, Copy)]
 pub struct Match {
     value: u32,
-    range_in_chars: (usize, usize),
-    range_in_bytes: (usize, usize),
+    range_chars: (usize, usize),
+    range_bytes: (usize, usize),
 }
 
 impl Match {
@@ -62,26 +62,26 @@ impl Match {
 
     /// Starting position of the match in characters.
     #[inline(always)]
-    pub const fn start_in_chars(&self) -> usize {
-        self.range_in_chars.0
+    pub const fn start_chars(&self) -> usize {
+        self.range_chars.0
     }
 
     /// Ending position of the match in characters.
     #[inline(always)]
-    pub const fn end_in_chars(&self) -> usize {
-        self.range_in_chars.1
+    pub const fn end_chars(&self) -> usize {
+        self.range_chars.1
     }
 
     /// Starting position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
-    pub const fn start_in_bytes(&self) -> usize {
-        self.range_in_bytes.0
+    pub const fn start_bytes(&self) -> usize {
+        self.range_bytes.0
     }
 
     /// Ending position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
-    pub const fn end_in_bytes(&self) -> usize {
-        self.range_in_bytes.1
+    pub const fn end_bytes(&self) -> usize {
+        self.range_bytes.1
     }
 }
 
@@ -89,7 +89,7 @@ impl Match {
 #[derive(Default, Clone, Copy)]
 struct MappedChar {
     c: Option<u32>,
-    end_in_bytes: usize,
+    end_bytes: usize,
 }
 
 #[derive(Default, Clone, Copy)]

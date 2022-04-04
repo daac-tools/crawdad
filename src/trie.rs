@@ -154,8 +154,8 @@ impl Trie {
     ///     for m in searcher.search(i..) {
     ///         matches.push((
     ///             m.value(),
-    ///             m.start_in_chars(), m.end_in_chars(),
-    ///             m.start_in_bytes(), m.end_in_bytes(),
+    ///             m.start_chars(), m.end_chars(),
+    ///             m.start_bytes(), m.end_bytes(),
     ///         ));
     ///     }
     /// }
@@ -185,12 +185,12 @@ impl Trie {
         K: AsRef<str>,
     {
         mapped.clear();
-        let mut end_in_bytes = 0;
+        let mut end_bytes = 0;
         for c in haystack.as_ref().chars() {
-            end_in_bytes += c.len_utf8();
+            end_bytes += c.len_utf8();
             mapped.push(MappedChar {
                 c: self.mapper.get(c),
-                end_in_bytes,
+                end_bytes,
             });
         }
     }
@@ -277,19 +277,19 @@ impl CommonPrefixSearcher<'_> {
 
     /// Creates an iterator to search for the haystack in the given range.
     pub fn search(&self, rng: RangeFrom<usize>) -> CommonPrefixSearchIter {
-        let start_in_chars = rng.start;
-        let start_in_bytes = if start_in_chars == 0 {
+        let start_chars = rng.start;
+        let start_bytes = if start_chars == 0 {
             0
         } else {
-            self.haystack[start_in_chars - 1].end_in_bytes
+            self.haystack[start_chars - 1].end_bytes
         };
         CommonPrefixSearchIter {
             haystack: &self.haystack,
-            haystack_pos: start_in_chars,
+            haystack_pos: start_chars,
             trie: self.trie,
             node_idx: 0,
-            start_in_chars,
-            start_in_bytes,
+            start_chars,
+            start_bytes,
         }
     }
 }
@@ -300,8 +300,8 @@ pub struct CommonPrefixSearchIter<'k, 't> {
     haystack_pos: usize,
     trie: &'t Trie,
     node_idx: u32,
-    start_in_chars: usize,
-    start_in_bytes: usize,
+    start_chars: usize,
+    start_bytes: usize,
 }
 
 impl Iterator for CommonPrefixSearchIter<'_, '_> {
@@ -326,22 +326,22 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
             self.haystack_pos += 1;
 
             if self.trie.is_leaf(self.node_idx) {
-                let end_in_chars = self.haystack_pos;
-                let end_in_bytes = self.haystack[end_in_chars - 1].end_in_bytes;
+                let end_chars = self.haystack_pos;
+                let end_bytes = self.haystack[end_chars - 1].end_bytes;
                 self.haystack_pos = self.haystack.len();
                 return Some(Match {
                     value: self.trie.get_value(self.node_idx),
-                    range_in_chars: (self.start_in_chars, end_in_chars),
-                    range_in_bytes: (self.start_in_bytes, end_in_bytes),
+                    range_chars: (self.start_chars, end_chars),
+                    range_bytes: (self.start_bytes, end_bytes),
                 });
             } else if self.trie.has_leaf(self.node_idx) {
-                let end_in_chars = self.haystack_pos;
-                let end_in_bytes = self.haystack[end_in_chars - 1].end_in_bytes;
+                let end_chars = self.haystack_pos;
+                let end_bytes = self.haystack[end_chars - 1].end_bytes;
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some(Match {
                     value: self.trie.get_value(leaf_idx),
-                    range_in_chars: (self.start_in_chars, end_in_chars),
-                    range_in_bytes: (self.start_in_bytes, end_in_bytes),
+                    range_chars: (self.start_chars, end_chars),
+                    range_bytes: (self.start_bytes, end_bytes),
                 });
             }
         }
@@ -381,10 +381,10 @@ mod tests {
             for m in searcher.search(i..) {
                 matches.push((
                     m.value(),
-                    m.start_in_chars(),
-                    m.end_in_chars(),
-                    m.start_in_bytes(),
-                    m.end_in_bytes(),
+                    m.start_chars(),
+                    m.end_chars(),
+                    m.start_bytes(),
+                    m.end_bytes(),
                 ));
             }
         }
