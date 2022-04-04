@@ -1,6 +1,4 @@
 //! A standard trie form that often provides the fastest queries.
-use std::ops::RangeFrom;
-
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
@@ -151,7 +149,7 @@ impl Trie {
     ///
     /// let mut matches = vec![];
     /// for i in 0..searcher.len_chars() {
-    ///     for m in searcher.search(i..) {
+    ///     for m in searcher.search(i) {
     ///         matches.push((
     ///             m.value(),
     ///             m.start_chars(), m.end_chars(),
@@ -276,8 +274,8 @@ impl CommonPrefixSearcher<'_> {
     }
 
     /// Creates an iterator to search for the haystack in the given range.
-    pub fn search(&self, rng: RangeFrom<usize>) -> CommonPrefixSearchIter {
-        let start_chars = rng.start;
+    pub fn search(&self, start: usize) -> CommonPrefixSearchIter {
+        let start_chars = start;
         let start_bytes = if start_chars == 0 {
             0
         } else {
@@ -378,7 +376,7 @@ mod tests {
 
         let mut matches = vec![];
         for i in 0..searcher.len_chars() {
-            for m in searcher.search(i..) {
+            for m in searcher.search(i) {
                 matches.push((
                     m.value(),
                     m.start_chars(),
