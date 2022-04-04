@@ -164,7 +164,7 @@ impl Trie {
     /// );
     /// ```
     #[inline(always)]
-    pub fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
+    pub const fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
         CommonPrefixSearcher {
             trie: self,
             haystack: vec![],
