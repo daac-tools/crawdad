@@ -16,6 +16,8 @@ pub mod mptrie;
 pub mod trie;
 mod utils;
 
+use std::ops::Range;
+
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
 pub(crate) const INVALID_IDX: u32 = 0xffff_ffff;
 pub(crate) const MAX_VALUE: u32 = OFFSET_MASK;
@@ -46,11 +48,11 @@ pub trait Statistics {
 }
 
 /// Result of common prefix search.
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone)]
 pub struct Match {
     value: u32,
-    end_in_chars: usize,
-    end_in_bytes: usize,
+    range_chars: Range<usize>,
+    range_bytes: Range<usize>,
 }
 
 impl Match {
@@ -60,31 +62,36 @@ impl Match {
         self.value
     }
 
+    /// Starting position of the match in characters.
+    #[inline(always)]
+    pub const fn start_chars(&self) -> usize {
+        self.range_chars.start
+    }
+
     /// Ending position of the match in characters.
     #[inline(always)]
-    pub const fn end_in_chars(&self) -> usize {
-        self.end_in_chars
+    pub const fn end_chars(&self) -> usize {
+        self.range_chars.end
+    }
+
+    /// Starting position of the match in bytes if characters are encoded in UTF-8.
+    #[inline(always)]
+    pub const fn start_bytes(&self) -> usize {
+        self.range_bytes.start
     }
 
     /// Ending position of the match in bytes if characters are encoded in UTF-8.
     #[inline(always)]
-    pub const fn end_in_bytes(&self) -> usize {
-        self.end_in_bytes
+    pub const fn end_bytes(&self) -> usize {
+        self.range_bytes.end
     }
 }
 
 /// Handler for a mapped character.
 #[derive(Default, Clone, Copy)]
-pub struct MappedChar {
+struct MappedChar {
     c: Option<u32>,
-    len_utf8: usize,
-}
-
-impl MappedChar {
-    /// Returns the number of bytes the original character needs if encoded in UTF-8.
-    pub const fn len_utf8(&self) -> usize {
-        self.len_utf8
-    }
+    end_bytes: usize,
 }
 
 #[derive(Default, Clone, Copy)]

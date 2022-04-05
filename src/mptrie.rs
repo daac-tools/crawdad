@@ -109,16 +109,16 @@ impl MpTrie {
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = MpTrie::from_keys(&keys).unwrap();
     ///
-    /// assert_eq!(trie.exact_match("世界中"), Some(1));
-    /// assert_eq!(trie.exact_match("日本中"), None);
+    /// assert_eq!(trie.exact_match("世界中".chars()), Some(1));
+    /// assert_eq!(trie.exact_match("日本中".chars()), None);
     /// ```
     #[inline(always)]
-    pub fn exact_match<K>(&self, key: K) -> Option<u32>
+    pub fn exact_match<I>(&self, key: I) -> Option<u32>
     where
-        K: AsRef<str>,
+        I: IntoIterator<Item = char>,
     {
         let mut node_idx = 0;
-        let mut chars = key.as_ref().chars();
+        let mut chars = key.into_iter();
 
         while !self.is_leaf(node_idx) {
             if let Some(c) = chars.next() {
@@ -162,18 +162,18 @@ impl MpTrie {
         }
     }
 
-    /// Returns an iterator for common prefix search.
+    /// Returns a common prefix searcher.
     ///
-    /// This operation finds all occurrences of keys starting from a search text, and
+    /// The searcher finds all occurrences of keys starting from an input haystack, and
     /// the occurrences are reported as a sequence of [`Match`](crate::Match).
     ///
     /// # Arguments
     ///
-    /// - `text`: Search text mapped by [`MpTrie::map_text`].
+    /// - `haystack`: Search haystack mapped by [`MpTrie::map_haystack`].
     ///
     /// # Examples
     ///
-    /// You can find all occurrences  of keys in a text as follows.
+    /// You can find all occurrences  of keys in a haystack as follows.
     ///
     /// ```
     /// use crawdad::MpTrie;
@@ -181,49 +181,50 @@ impl MpTrie {
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = MpTrie::from_keys(&keys).unwrap();
     ///
-    /// let mut mapped = vec![];
-    /// trie.map_text("国民が世界中にて", &mut mapped);
+    /// let mut searcher = trie.common_prefix_searcher();
+    /// searcher.update_haystack("国民が世界中にて".chars());
     ///
-    /// let mut j = 0;
     /// let mut matches = vec![];
-    /// for i in 0..mapped.len() {
-    ///     for m in trie.common_prefix_searcher(&mapped[i..]) {
-    ///         matches.push((m.value(), i + m.end_in_chars(), j + m.end_in_bytes()));
+    /// for i in 0..searcher.len_chars() {
+    ///     for m in searcher.search(i) {
+    ///         matches.push((
+    ///             m.value(),
+    ///             m.start_chars(), m.end_chars(),
+    ///             m.start_bytes(), m.end_bytes(),
+    ///         ));
     ///     }
-    ///     j += mapped[i].len_utf8();
     /// }
-    /// assert_eq!(matches, vec![(2, 2, 6), (0, 5, 15), (1, 6, 18)]);
+    ///
+    /// assert_eq!(
+    ///     matches,
+    ///     vec![(2, 0, 2, 0, 6), (0, 3, 5, 9, 15), (1, 3, 6, 9, 18)]
+    /// );
     /// ```
-    pub const fn common_prefix_searcher<'k, 't>(
-        &'t self,
-        text: &'k [MappedChar],
-    ) -> CommonPrefixSearcher<'k, 't> {
+    pub const fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
         CommonPrefixSearcher {
-            text,
-            text_pos: 0,
-            text_pos_in_bytes: 0,
             trie: self,
-            node_idx: 0,
+            haystack: vec![],
         }
     }
 
-    /// Prepares a search text for common prefix search.
+    /// Prepares a search haystack for common prefix search.
     ///
     /// # Arguments
     ///
-    /// - `text`: Search text.
-    /// - `mapped`: Mapped text.
+    /// - `haystack`: Search haystack.
+    /// - `mapped`: Mapped haystack.
     #[inline(always)]
-    pub fn map_text<K>(&self, text: K, mapped: &mut Vec<MappedChar>)
+    fn map_haystack<I>(&self, haystack: I, mapped: &mut Vec<MappedChar>)
     where
-        K: AsRef<str>,
+        I: IntoIterator<Item = char>,
     {
         mapped.clear();
-        for c in text.as_ref().chars() {
-            let len_utf8 = c.len_utf8();
+        let mut end_bytes = 0;
+        for c in haystack {
+            end_bytes += c.len_utf8();
             mapped.push(MappedChar {
                 c: self.mapper.get(c),
-                len_utf8,
+                end_bytes,
             });
         }
     }
@@ -300,74 +301,116 @@ impl Statistics for MpTrie {
     }
 }
 
-/// Iterator created by [`MpTrie::common_prefix_searcher`].
-pub struct CommonPrefixSearcher<'k, 't> {
-    text: &'k [MappedChar],
-    text_pos: usize,
-    text_pos_in_bytes: usize,
+/// Common prefix searcher created by [`MpTrie::common_prefix_searcher`].
+pub struct CommonPrefixSearcher<'t> {
     trie: &'t MpTrie,
-    node_idx: u32,
+    haystack: Vec<MappedChar>,
 }
 
-impl Iterator for CommonPrefixSearcher<'_, '_> {
+impl CommonPrefixSearcher<'_> {
+    /// Sets a search haystack.
+    pub fn update_haystack<I>(&mut self, haystack: I)
+    where
+        I: IntoIterator<Item = char>,
+    {
+        self.trie.map_haystack(haystack, &mut self.haystack);
+    }
+
+    /// Gets the haystack length in characters.
+    pub fn len_chars(&self) -> usize {
+        self.haystack.len()
+    }
+
+    /// Creates an iterator to search for the haystack in the given range.
+    pub fn search(&self, start: usize) -> CommonPrefixSearchIter {
+        let start_chars = start;
+        let start_bytes = if start_chars == 0 {
+            0
+        } else {
+            self.haystack[start_chars - 1].end_bytes
+        };
+        CommonPrefixSearchIter {
+            haystack: &self.haystack,
+            haystack_pos: start_chars,
+            trie: self.trie,
+            node_idx: 0,
+            start_chars,
+            start_bytes,
+        }
+    }
+}
+
+/// Iterator for common prefix search.
+pub struct CommonPrefixSearchIter<'k, 't> {
+    haystack: &'k [MappedChar],
+    haystack_pos: usize,
+    trie: &'t MpTrie,
+    node_idx: u32,
+    start_chars: usize,
+    start_bytes: usize,
+}
+
+impl Iterator for CommonPrefixSearchIter<'_, '_> {
     type Item = Match;
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.text_pos < self.text.len() {
-            let mc = self.text[self.text_pos];
+        while self.haystack_pos < self.haystack.len() {
+            let mc = self.haystack[self.haystack_pos];
             if let Some(c) = mc.c {
                 if let Some(child_idx) = self.trie.get_child_idx(self.node_idx, c) {
                     self.node_idx = child_idx;
                 } else {
-                    self.text_pos = self.text.len();
+                    self.haystack_pos = self.haystack.len();
                     return None;
                 }
             } else {
-                self.text_pos = self.text.len();
+                self.haystack_pos = self.haystack.len();
                 return None;
             }
 
-            self.text_pos += 1;
-            self.text_pos_in_bytes += mc.len_utf8;
+            self.haystack_pos += 1;
 
             if self.trie.is_leaf(self.node_idx) {
                 let tail_pos = self.trie.get_value(self.node_idx) as usize;
                 let mut tail_iter = self.trie.tail_iter(tail_pos);
 
                 for tc in tail_iter.by_ref() {
-                    if self.text_pos == self.text.len() {
+                    if self.haystack_pos == self.haystack.len() {
                         return None;
                     }
-                    let mc = self.text[self.text_pos];
+                    let mc = self.haystack[self.haystack_pos];
                     if let Some(c) = mc.c {
                         if c != tc {
-                            self.text_pos = self.text.len();
+                            self.haystack_pos = self.haystack.len();
                             return None;
                         }
                     } else {
-                        self.text_pos = self.text.len();
+                        self.haystack_pos = self.haystack.len();
                         return None;
                     }
-                    self.text_pos += 1;
-                    self.text_pos_in_bytes += mc.len_utf8;
+                    self.haystack_pos += 1;
                 }
 
                 let value = tail_iter.value();
-                let end_in_chars = self.text_pos;
-                self.text_pos = self.text.len();
+                let end_chars = self.haystack_pos;
+                let end_bytes = self.haystack[end_chars - 1].end_bytes;
+
+                self.haystack_pos = self.haystack.len();
 
                 return Some(Match {
                     value,
-                    end_in_chars,
-                    end_in_bytes: self.text_pos_in_bytes,
+                    range_chars: self.start_chars..end_chars,
+                    range_bytes: self.start_bytes..end_bytes,
                 });
             } else if self.trie.has_leaf(self.node_idx) {
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
+                let end_chars = self.haystack_pos;
+                let end_bytes = self.haystack[end_chars - 1].end_bytes;
                 return Some(Match {
                     value: self.trie.get_value(leaf_idx),
-                    end_in_chars: self.text_pos,
-                    end_in_bytes: self.text_pos_in_bytes,
+                    range_chars: self.start_chars..end_chars,
+                    range_bytes: self.start_bytes..end_bytes,
                 });
             }
         }
@@ -413,14 +456,14 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = MpTrie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
-            assert_eq!(trie.exact_match(&key), Some(i as u32));
+            assert_eq!(trie.exact_match(key.chars()), Some(i as u32));
         }
-        assert_eq!(trie.exact_match("世"), None);
-        assert_eq!(trie.exact_match("世論"), None);
-        assert_eq!(trie.exact_match("世界中で"), None);
-        assert_eq!(trie.exact_match("統計"), None);
-        assert_eq!(trie.exact_match("統計調"), None);
-        assert_eq!(trie.exact_match("日本"), None);
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世論".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("統計".chars()), None);
+        assert_eq!(trie.exact_match("統計調".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
     }
 
     #[test]
@@ -428,17 +471,25 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = MpTrie::from_keys(&keys).unwrap();
 
-        let mut mapped = vec![];
-        trie.map_text("世界中の統計世論調査", &mut mapped);
+        let mut searcher = trie.common_prefix_searcher();
+        searcher.update_haystack("世界中の統計世論調査".chars());
 
-        let mut j = 0;
         let mut matches = vec![];
-        for i in 0..mapped.len() {
-            for m in trie.common_prefix_searcher(&mapped[i..]) {
-                matches.push((m.value(), i + m.end_in_chars(), j + m.end_in_bytes()));
+        for i in 0..searcher.len_chars() {
+            for m in searcher.search(i) {
+                matches.push((
+                    m.value(),
+                    m.start_chars(),
+                    m.end_chars(),
+                    m.start_bytes(),
+                    m.end_bytes(),
+                ));
             }
-            j += mapped[i].len_utf8();
         }
-        assert_eq!(matches, vec![(0, 2, 6), (1, 3, 9), (2, 10, 30)]);
+
+        assert_eq!(
+            matches,
+            vec![(0, 0, 2, 0, 6), (1, 0, 3, 0, 9), (2, 6, 10, 18, 30)]
+        );
     }
 }
