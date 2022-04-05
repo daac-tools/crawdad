@@ -1,11 +1,9 @@
 use crate::errors::{CrawdadError, Result};
 use crate::mapper::CodeMapper;
-use crate::{utils, FmpTrie, MpTrie, Node, Trie};
+use crate::{utils, MpTrie, Node, Trie};
 use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
 
 use std::cmp::Ordering;
-
-use sucds::RsBitVector;
 
 #[derive(Default)]
 struct Record {
@@ -149,59 +147,6 @@ impl Builder {
             tails,
             code_size,
             value_size,
-        })
-    }
-
-    pub fn release_mpftrie(self) -> Result<FmpTrie> {
-        let Builder {
-            mapper,
-            mut nodes,
-            suffixes,
-            ..
-        } = self;
-
-        let suffixes =
-            suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
-
-        let mut ranks = vec![false; nodes.len()];
-        let mut auxes = vec![];
-
-        for node_idx in 0..nodes.len() {
-            if nodes[node_idx].is_vacant() {
-                continue;
-            }
-            if !nodes[node_idx].is_leaf() {
-                continue;
-            }
-
-            debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
-            let parent_idx = nodes[node_idx].check as usize;
-            let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
-            let suffix = &suffixes[suf_idx];
-
-            // HasLeaf?
-            if nodes[parent_idx].has_leaf() {
-                // `node_idx` is indicated from `parent_idx` with END_CODE?
-                if nodes[parent_idx].base == node_idx as u32 {
-                    assert!(suffix.key.is_empty());
-                    nodes[node_idx].base = suffix.value | !OFFSET_MASK;
-                    continue;
-                }
-            }
-
-            nodes[node_idx].base = suffix.value | !OFFSET_MASK;
-            ranks[node_idx] = true;
-
-            let tail: Vec<_> = suffix.key.iter().map(|&c| mapper.get(c)).collect();
-            let tail_hash = utils::murmur_hash2(&tail).unwrap();
-            auxes.push((tail.len() as u8, tail_hash as u8));
-        }
-
-        Ok(FmpTrie {
-            mapper,
-            nodes,
-            ranks: RsBitVector::from_bits(ranks),
-            auxes,
         })
     }
 
