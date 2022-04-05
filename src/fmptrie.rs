@@ -7,7 +7,7 @@ use crate::{utils, MappedChar, Match, Node, Statistics};
 
 use crate::END_CODE;
 
-use sucds::RsBitVector;
+use sucds::{RsBitVector, Searial};
 
 /// A fuzzy minimal-prefix trie form that is more memory-efficient
 /// and allows for some false positives (Experimental).
