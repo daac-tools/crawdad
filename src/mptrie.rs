@@ -162,9 +162,9 @@ impl MpTrie {
         }
     }
 
-    /// Returns an iterator for common prefix search.
+    /// Returns a common prefix searcher.
     ///
-    /// This operation finds all occurrences of keys starting from a search haystack, and
+    /// The searcher finds all occurrences of keys starting from an input haystack, and
     /// the occurrences are reported as a sequence of [`Match`](crate::Match).
     ///
     /// # Arguments
@@ -340,7 +340,7 @@ impl CommonPrefixSearcher<'_> {
     }
 }
 
-/// Iterator created by [`MpTrie::common_prefix_searcher`].
+/// Iterator for common prefix search.
 pub struct CommonPrefixSearchIter<'k, 't> {
     haystack: &'k [MappedChar],
     haystack_pos: usize,
