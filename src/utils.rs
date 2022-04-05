@@ -1,9 +1,6 @@
-use crate::MappedChar;
-
 use std::cmp::Ordering;
 
 /// pack_size returns the smallest number of bytes that can encode `n`.
-#[allow(dead_code)]
 #[inline(always)]
 pub const fn pack_size(n: u32) -> u8 {
     if n < 1 << 8 {
@@ -17,13 +14,11 @@ pub const fn pack_size(n: u32) -> u8 {
     }
 }
 
-#[allow(dead_code)]
 #[inline(always)]
 pub fn pack_u32(vec: &mut Vec<u8>, n: u32, nbytes: u8) {
     vec.extend_from_slice(&n.to_le_bytes()[..nbytes as usize]);
 }
 
-#[allow(dead_code)]
 #[inline(always)]
 pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
     let mut n_array = [0; 4];
@@ -35,9 +30,8 @@ pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
 //
 // MurmurHash2 was written by Austin Appleby, and is placed in the public
 // domain. The author hereby disclaims copyright to this source code.
-#[allow(dead_code)]
 #[inline(always)]
-fn murmur_hash2(key: &[MappedChar]) -> Option<u32> {
+pub fn murmur_hash2(key: &[Option<u32>]) -> Option<u32> {
     let seed = 0xbc9f1d34;
 
     // 'm' and 'r' are mixing constants generated offline.
@@ -50,7 +44,7 @@ fn murmur_hash2(key: &[MappedChar]) -> Option<u32> {
 
     // Mix 4 bytes at a time into the hash
     for k in key {
-        if let Some(mut c) = k.c {
+        if let Some(mut c) = k {
             c = c.wrapping_mul(m);
             c ^= c >> r;
             c = c.wrapping_mul(m);

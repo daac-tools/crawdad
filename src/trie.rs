@@ -163,7 +163,6 @@ impl Trie {
     ///     vec![(2, 0, 2, 0, 6), (0, 3, 5, 9, 15), (1, 3, 6, 9, 18)]
     /// );
     /// ```
-    #[inline(always)]
     pub const fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
         CommonPrefixSearcher {
             trie: self,
@@ -333,9 +332,9 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
                     range_bytes: self.start_bytes..end_bytes,
                 });
             } else if self.trie.has_leaf(self.node_idx) {
+                let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 let end_chars = self.haystack_pos;
                 let end_bytes = self.haystack[end_chars - 1].end_bytes;
-                let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
                 return Some(Match {
                     value: self.trie.get_value(leaf_idx),
                     range_chars: self.start_chars..end_chars,
