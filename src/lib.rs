@@ -5,12 +5,12 @@
 //! and you can enjoy fast text processing on such strings such as Japanese or Chinese.
 #![deny(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
+
 #[cfg(target_pointer_width = "16")]
 compile_error!("`target_pointer_width` must be larger than or equal to 32");
 
 mod builder;
 pub mod errors;
-pub mod fmptrie;
 mod mapper;
 pub mod mptrie;
 pub mod trie;
@@ -26,7 +26,6 @@ pub(crate) const END_CODE: u32 = 0;
 /// Special terminator, which must not be contained in keys.
 pub const END_MARKER: char = '\u{0}';
 
-pub use fmptrie::FmpTrie;
 pub use mptrie::MpTrie;
 pub use trie::Trie;
 

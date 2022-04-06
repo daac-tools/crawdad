@@ -16,7 +16,6 @@ Crawdad contains the three trie implementations:
 
 - `crawdad::Trie` is a standard trie form that often provides the fastest queries.
 - `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings. 
-- `crawdad::FmpTrie` is a fuzzy minimal-prefix trie form that is more memory-efficient and allows for some false positives (Experimental).
 
 ## Disclaimer
 
