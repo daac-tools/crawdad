@@ -1,16 +1,18 @@
 # 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 
+## Overview
+
 Crawdad is a library of natural language dictionaries using character-wise double-array tries.
 The implementation is optimized for strings of multibyte-characters,
 and you can enjoy fast text processing on such strings such as Japanese or Chinese.
 
-## What can do
+### What can do
 
 - **Key-value mapping**: Crawdad stores a set of string keys with mapping arbitrary integer values.
 - **Exact match**: Crawdad supports a fast lookup query for an input key.
 - **Common prefix search**: Crawdad supports fast *common prefix search* that can be used to enumerate all keys appearing in a text.
 
-## Data structures
+### Data structures
 
 Crawdad contains the three trie implementations:
 
