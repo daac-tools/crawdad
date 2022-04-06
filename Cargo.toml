@@ -2,6 +2,15 @@
 name = "crawdad"
 version = "0.1.0"
 edition = "2021"
+authors = ["Shunsuke Kanda <shnsk.knd@gmail.com>"]
+description = "Crawdad: ChaRActer-Wise Double-Array Dictionary"
+license = "MIT OR Apache-2.0"
+homepage = "https://github.com/legalforce-research/crawdad"
+repository = "https://github.com/legalforce-research/crawdad"
+readme = "README.md"
+keywords = ["search", "text", "double-array", "trie"]
+categories = ["text-processing", "algorithms", "data-structures"]
+exclude = [".*"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
