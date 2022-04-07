@@ -16,6 +16,9 @@ impl CodeMapper {
             sorted.sort_unstable_by(|(c1, f1), (c2, f2)| f2.cmp(f1).then_with(|| c1.cmp(c2)));
             sorted
         };
+
+        assert!(sorted.len() <= u32::MAX as usize);
+
         let mut table = vec![INVALID_CODE; freqs.len()];
         for (i, &(c, _)) in sorted.iter().enumerate() {
             table[c] = i as u32;

@@ -44,7 +44,11 @@ impl Builder {
         I: IntoIterator<Item = K>,
         K: AsRef<str>,
     {
-        self.build_from_records(keys.into_iter().enumerate().map(|(i, k)| (k, i as u32)))
+        self.build_from_records(
+            keys.into_iter()
+                .enumerate()
+                .map(|(i, k)| (k, i.try_into().unwrap())),
+        )
     }
 
     pub fn build_from_records<I, K>(mut self, records: I) -> Result<Self>
@@ -102,7 +106,7 @@ impl Builder {
 
         let mut tails = vec![];
 
-        let max_code = (mapper.alphabet_size() - 1) as u32;
+        let max_code = mapper.alphabet_size() - 1;
         let code_size = utils::pack_size(max_code);
 
         let max_value = suffixes.iter().map(|s| s.value).max().unwrap();
@@ -124,15 +128,25 @@ impl Builder {
             // HasLeaf?
             if nodes[parent_idx].has_leaf() {
                 // `node_idx` is indicated from `parent_idx` with END_CODE?
-                if nodes[parent_idx].base == node_idx as u32 {
+                if nodes[parent_idx].base as usize == node_idx {
                     assert!(suffix.key.is_empty());
                     nodes[node_idx].base = suffix.value | !OFFSET_MASK;
                     continue;
                 }
             }
 
-            nodes[node_idx].base = tails.len() as u32 | !OFFSET_MASK;
-            tails.push(suffix.key.len() as u8);
+            let tail_start = if tails.len() <= OFFSET_MASK as usize {
+                tails.len() as u32
+            } else {
+                return Err(CrawdadError::scale("length of tails", OFFSET_MASK));
+            };
+
+            if suffix.key.len() > u8::MAX as usize {
+                return Err(CrawdadError::scale("length of suffix", u8::MAX as u32));
+            }
+
+            nodes[node_idx].base = tail_start | !OFFSET_MASK;
+            tails.push(suffix.key.len().try_into().unwrap());
             suffix
                 .key
                 .iter()
@@ -152,6 +166,7 @@ impl Builder {
 
     #[inline(always)]
     fn num_nodes(&self) -> u32 {
+        // The bound has been checked in enlarge().
         self.nodes.len() as u32
     }
 
@@ -187,7 +202,14 @@ impl Builder {
 
         if let Some(suffixes) = self.suffixes.as_mut() {
             if spos + 1 == epos {
-                let suffix_idx = suffixes.len() as u32;
+                // It has been checked in build_from_records().
+                debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
+
+                let suffix_idx = if suffixes.len() <= OFFSET_MASK as usize {
+                    suffixes.len() as u32
+                } else {
+                    return Err(CrawdadError::scale("length of suffixes", OFFSET_MASK));
+                };
                 self.nodes[node_idx as usize].base = suffix_idx | !OFFSET_MASK;
                 suffixes.push(Suffix {
                     key: pop_end_marker(&self.records[spos].key[depth..]),
@@ -197,6 +219,7 @@ impl Builder {
             }
         } else if self.records[spos].key.len() == depth {
             debug_assert_eq!(spos + 1, epos);
+            // It has been checked in build_from_records().
             debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
             // Sets IsLeaf = True
             self.nodes[node_idx as usize].base = self.records[spos].value | !OFFSET_MASK;
