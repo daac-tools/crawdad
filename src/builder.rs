@@ -141,7 +141,7 @@ impl Builder {
                 return Err(CrawdadError::scale("length of tails", OFFSET_MASK));
             };
 
-            if suffix.key.len() > u8::MAX as usize {
+            if suffix.key.len() > usize::from(u8::MAX) {
                 return Err(CrawdadError::scale("length of suffix", u32::from(u8::MAX)));
             }
 
