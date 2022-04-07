@@ -17,15 +17,13 @@ impl CodeMapper {
             sorted
         };
 
-        assert!(sorted.len() <= u32::MAX as usize);
-
         let mut table = vec![INVALID_CODE; freqs.len()];
         for (i, &(c, _)) in sorted.iter().enumerate() {
-            table[c] = i as u32;
+            table[c] = i.try_into().unwrap();
         }
         Self {
             table,
-            alphabet_size: sorted.len() as u32,
+            alphabet_size: sorted.len().try_into().unwrap(),
         }
     }
 

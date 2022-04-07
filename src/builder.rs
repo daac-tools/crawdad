@@ -136,13 +136,13 @@ impl Builder {
             }
 
             let tail_start = if tails.len() <= OFFSET_MASK as usize {
-                tails.len() as u32
+                u32::try_from(tails.len()).unwrap()
             } else {
                 return Err(CrawdadError::scale("length of tails", OFFSET_MASK));
             };
 
             if suffix.key.len() > u8::MAX as usize {
-                return Err(CrawdadError::scale("length of suffix", u8::MAX as u32));
+                return Err(CrawdadError::scale("length of suffix", u32::from(u8::MAX)));
             }
 
             nodes[node_idx].base = tail_start | !OFFSET_MASK;
@@ -166,8 +166,7 @@ impl Builder {
 
     #[inline(always)]
     fn num_nodes(&self) -> u32 {
-        // The bound has been checked in enlarge().
-        self.nodes.len() as u32
+        self.nodes.len().try_into().unwrap()
     }
 
     fn init_array(&mut self) {
@@ -206,7 +205,7 @@ impl Builder {
                 debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
 
                 let suffix_idx = if suffixes.len() <= OFFSET_MASK as usize {
-                    suffixes.len() as u32
+                    u32::try_from(suffixes.len()).unwrap()
                 } else {
                     return Err(CrawdadError::scale("length of suffixes", OFFSET_MASK));
                 };

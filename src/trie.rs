@@ -355,7 +355,10 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
-            assert_eq!(trie.exact_match(key.chars()), Some(i as u32));
+            assert_eq!(
+                trie.exact_match(key.chars()),
+                Some(u32::try_from(i).unwrap())
+            );
         }
         assert_eq!(trie.exact_match("世".chars()), None);
         assert_eq!(trie.exact_match("世論".chars()), None);
