@@ -10,7 +10,7 @@ use crawdad::Statistics;
 use clap::Parser;
 
 const TRIALS: usize = 10;
-const SAMPLES: usize = 1000;
+const QUERIES: usize = 1000;
 
 #[derive(Parser, Debug)]
 #[clap(name = "bench", about = "A program to measure the performance.")]
@@ -20,75 +20,6 @@ struct Args {
 
     #[clap(short = 't', long)]
     texts_filename: Option<String>,
-}
-
-macro_rules! crawdad_common {
-    ($trie:ident, $keys:ident, $queries:ident, $texts:ident) => {
-        let start = Instant::now();
-        let trie = crawdad::$trie::from_keys(&$keys).unwrap();
-        let duration = start.elapsed();
-        print_heap_bytes(trie.heap_bytes());
-        println!("num_elems: {}", trie.num_elems());
-        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
-        println!("construction: {:.3} [sec]", duration.as_secs_f64());
-
-        {
-            // Warmup
-            let mut dummy = 0;
-            for q in &$queries {
-                dummy += trie.exact_match(q).unwrap();
-            }
-            // Measure
-            let start = Instant::now();
-            for _ in 0..TRIALS {
-                for q in &$queries {
-                    dummy += trie.exact_match(q).unwrap();
-                }
-            }
-            let duration = start.elapsed();
-            println!(
-                "exact_match: {:.3} [ns/query]",
-                duration.as_secs_f64() * 1000000000. / TRIALS as f64 / SAMPLES as f64
-            );
-            println!("dummy: {}", dummy);
-        }
-
-        if let Some(texts) = $texts.as_ref() {
-            // Warmup
-            let mut dummy = 0;
-            let mut mapped = Vec::with_capacity(256);
-            for text in texts {
-                trie.map_text(text, &mut mapped);
-                let mut j = 0;
-                for i in 0..mapped.len() {
-                    for m in trie.common_prefix_searcher(&mapped[i..]) {
-                        dummy += j + m.end_in_bytes() + m.value() as usize;
-                    }
-                    j += mapped[i].len_utf8();
-                }
-            }
-            // Measure
-            let start = Instant::now();
-            for _ in 0..TRIALS {
-                for text in texts {
-                    trie.map_text(text, &mut mapped);
-                    let mut j = 0;
-                    for i in 0..mapped.len() {
-                        for m in trie.common_prefix_searcher(&mapped[i..]) {
-                            dummy += j + m.end_in_bytes() + m.value() as usize;
-                        }
-                        j += mapped[i].len_utf8();
-                    }
-                }
-            }
-            let duration = start.elapsed();
-            println!(
-                "common_prefix_search: {:.3} [us/text]",
-                duration.as_secs_f64() * 1000000. / TRIALS as f64 / texts.len() as f64
-            );
-            println!("dummy: {}", dummy);
-        }
-    };
 }
 
 fn main() {
@@ -109,19 +40,105 @@ fn main() {
     };
 
     println!("#keys: {}", keys.len());
+
     {
+        println!();
         println!("[crawdad/trie]");
-        crawdad_common!(Trie, keys, queries, texts);
+        let start = Instant::now();
+        let trie = crawdad::Trie::from_keys(&keys).unwrap();
+        let duration = start.elapsed();
+        print_heap_bytes(trie.heap_bytes());
+        println!("num_elems: {}", trie.num_elems());
+        println!("num_vacants: {}", trie.num_vacants());
+        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        {
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for query in &queries {
+                    dummy += trie.exact_match(query.chars()).unwrap();
+                }
+            });
+            println!(
+                "exact_match: {:.3} [ns/query]",
+                to_ns(elapsed_sec) / queries.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+
+        if let Some(texts) = texts.as_ref() {
+            // Warmup
+            let mut dummy = 0;
+            let mut searcher = trie.common_prefix_searcher();
+            let elapsed_sec = measure(TRIALS, || {
+                for text in texts {
+                    searcher.update_haystack(text.chars());
+                    for i in 0..searcher.len_chars() {
+                        for m in searcher.search(i) {
+                            dummy += m.end_bytes() + m.value() as usize;
+                        }
+                    }
+                }
+            });
+            println!(
+                "enumeration: {:.3} [us/text]",
+                to_us(elapsed_sec) / texts.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
     }
+
     {
+        println!();
         println!("[crawdad/mptrie]");
-        crawdad_common!(MpTrie, keys, queries, texts);
+        let start = Instant::now();
+        let trie = crawdad::MpTrie::from_keys(&keys).unwrap();
+        let duration = start.elapsed();
+        print_heap_bytes(trie.heap_bytes());
+        println!("num_elems: {}", trie.num_elems());
+        println!("num_vacants: {}", trie.num_vacants());
+        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        {
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for query in &queries {
+                    dummy += trie.exact_match(query.chars()).unwrap();
+                }
+            });
+            println!(
+                "exact_match: {:.3} [ns/query]",
+                to_ns(elapsed_sec) / queries.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+
+        if let Some(texts) = texts.as_ref() {
+            // Warmup
+            let mut dummy = 0;
+            let mut searcher = trie.common_prefix_searcher();
+            let elapsed_sec = measure(TRIALS, || {
+                for text in texts {
+                    searcher.update_haystack(text.chars());
+                    for i in 0..searcher.len_chars() {
+                        for m in searcher.search(i) {
+                            dummy += m.end_bytes() + m.value() as usize;
+                        }
+                    }
+                }
+            });
+            println!(
+                "enumeration: {:.3} [us/text]",
+                to_us(elapsed_sec) / texts.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
     }
+
     {
-        println!("[crawdad/fmptrie]");
-        crawdad_common!(FmpTrie, keys, queries, texts);
-    }
-    {
+        println!();
         println!("[yada]");
         let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(
@@ -140,40 +157,22 @@ fn main() {
 
         let da = yada::DoubleArray::new(data);
         {
-            // Warmup
             let mut dummy = 0;
-            for q in &queries {
-                dummy += da.exact_match_search(q).unwrap();
-            }
-            // Measure
-            let start = Instant::now();
-            for _ in 0..TRIALS {
-                for q in &queries {
-                    dummy += da.exact_match_search(q).unwrap();
+            let elapsed_sec = measure(TRIALS, || {
+                for query in &queries {
+                    dummy += da.exact_match_search(query).unwrap();
                 }
-            }
-            let duration = start.elapsed();
+            });
             println!(
                 "exact_match: {:.3} [ns/query]",
-                duration.as_secs_f64() * 1000000000. / TRIALS as f64 / SAMPLES as f64
+                to_ns(elapsed_sec) / queries.len() as f64
             );
             println!("dummy: {}", dummy);
         }
 
         if let Some(texts) = texts.as_ref() {
-            // Warmup
             let mut dummy = 0;
-            for text in texts {
-                let text_bytes = text.as_bytes();
-                for i in 0..text_bytes.len() {
-                    for (id, length) in da.common_prefix_search(&text_bytes[i..]) {
-                        dummy += i + length + id as usize;
-                    }
-                }
-            }
-            // Measure
-            let start = Instant::now();
-            for _ in 0..10 {
+            let elapsed_sec = measure(TRIALS, || {
                 for text in texts {
                     let text_bytes = text.as_bytes();
                     for i in 0..text_bytes.len() {
@@ -182,11 +181,113 @@ fn main() {
                         }
                     }
                 }
-            }
-            let duration = start.elapsed();
+            });
             println!(
-                "common_prefix_search: {:.3} [us/text]",
-                duration.as_secs_f64() * 1000000. / TRIALS as f64 / texts.len() as f64
+                "enumeration: {:.3} [us/text]",
+                to_us(elapsed_sec) / texts.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+    }
+
+    {
+        println!();
+        println!("[fst/map]");
+        let start = Instant::now();
+        let map = fst::raw::Fst::from_iter_map(
+            keys.iter()
+                .cloned()
+                .enumerate()
+                .map(|(i, key)| (key, i.try_into().unwrap())),
+        )
+        .unwrap();
+        let duration = start.elapsed();
+        print_heap_bytes(map.as_bytes().len());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        {
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for query in &queries {
+                    dummy += map.get(query).unwrap().value() as u32;
+                }
+            });
+            println!(
+                "exact_match: {:.3} [ns/query]",
+                to_ns(elapsed_sec) / queries.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+
+        if let Some(texts) = texts.as_ref() {
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for text in texts {
+                    let text_bytes = text.as_bytes();
+                    for i in 0..text_bytes.len() {
+                        for (id, length) in fst_common_prefix_search(&map, &text_bytes[i..]) {
+                            dummy += i + length as usize + id as usize;
+                        }
+                    }
+                }
+            });
+            println!(
+                "enumeration: {:.3} [us/text]",
+                to_us(elapsed_sec) / texts.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+    }
+
+    {
+        println!();
+        println!("[daachorse/DoubleArrayAhoCorasick]");
+        let start = Instant::now();
+        let pma = daachorse::DoubleArrayAhoCorasick::new(&keys).unwrap();
+        let duration = start.elapsed();
+        print_heap_bytes(pma.heap_bytes());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        if let Some(texts) = texts.as_ref() {
+            // Warmup
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for text in texts {
+                    for m in pma.find_overlapping_iter(text) {
+                        dummy += m.end() + m.value() as usize;
+                    }
+                }
+            });
+            println!(
+                "enumeration: {:.3} [us/text]",
+                to_us(elapsed_sec) / texts.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+    }
+
+    {
+        println!();
+        println!("[daachorse/charwise/CharwiseDoubleArrayAhoCorasick]");
+        let start = Instant::now();
+        let pma = daachorse::charwise::CharwiseDoubleArrayAhoCorasick::new(&keys).unwrap();
+        let duration = start.elapsed();
+        print_heap_bytes(pma.heap_bytes());
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        if let Some(texts) = texts.as_ref() {
+            // Warmup
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for text in texts {
+                    for m in pma.find_overlapping_iter(text) {
+                        dummy += m.end() + m.value() as usize;
+                    }
+                }
+            });
+            println!(
+                "enumeration: {:.3} [us/text]",
+                to_us(elapsed_sec) / texts.len() as f64
             );
             println!("dummy: {}", dummy);
         }
@@ -212,5 +313,62 @@ where
 
 fn random_sample(keys: &[String]) -> Vec<String> {
     let mut rng = rand::thread_rng();
-    rand::seq::sample_slice(&mut rng, keys, SAMPLES)
+    rand::seq::sample_slice(&mut rng, keys, QUERIES)
+}
+
+fn fst_common_prefix_search<'a>(
+    fst: &'a fst::raw::Fst<Vec<u8>>,
+    text: &'a [u8],
+) -> impl Iterator<Item = (u64, u64)> + 'a {
+    text.iter()
+        .scan(
+            (0, fst.root(), fst::raw::Output::zero()),
+            move |(pattern_len, node, output), &byte| {
+                if let Some(b_index) = node.find_input(byte) {
+                    let transition = node.transition(b_index);
+                    *pattern_len += 1;
+                    *output = output.cat(transition.out);
+                    *node = fst.node(transition.addr);
+                    return Some((node.is_final(), *pattern_len, output.value()));
+                }
+                None
+            },
+        )
+        .filter_map(|(is_final, pattern_len, pattern_id)| {
+            if is_final {
+                Some((pattern_id, pattern_len))
+            } else {
+                None
+            }
+        })
+}
+
+fn measure<F>(num_trials: usize, mut func: F) -> f64
+where
+    F: FnMut(),
+{
+    // Warmup
+    func();
+    // Measure
+    let start = Instant::now();
+    for _ in 0..num_trials {
+        func();
+    }
+    let duration = start.elapsed();
+    duration.as_secs_f64() / num_trials as f64
+}
+
+#[allow(dead_code)]
+fn to_ms(sec: f64) -> f64 {
+    sec * 1_000.
+}
+
+#[allow(dead_code)]
+fn to_us(sec: f64) -> f64 {
+    sec * 1_000_000.
+}
+
+#[allow(dead_code)]
+fn to_ns(sec: f64) -> f64 {
+    sec * 1_000_000_000.
 }
