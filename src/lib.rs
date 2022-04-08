@@ -9,6 +9,9 @@
 #[cfg(target_pointer_width = "16")]
 compile_error!("`target_pointer_width` must be larger than or equal to 32");
 
+#[cfg(not(feature = "alloc"))]
+compile_error!("`alloc` feature is currently required to build this crate");
+
 #[macro_use]
 extern crate alloc;
 

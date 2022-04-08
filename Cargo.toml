@@ -16,6 +16,11 @@ exclude = [".*"]
 
 [dependencies]
 
+[features]
+default = ["alloc"]
+
+alloc = []
+
 [workspace]
 members = [
     "bench",
