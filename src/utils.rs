@@ -1,4 +1,6 @@
-use std::cmp::Ordering;
+use core::cmp::Ordering;
+
+use alloc::vec::Vec;
 
 /// Returns the smallest number of bytes that can encode `n`.
 #[inline(always)]

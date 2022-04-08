@@ -6,6 +6,8 @@ use crate::{MappedChar, Match, Node, Statistics};
 
 use crate::END_CODE;
 
+use alloc::vec::Vec;
+
 /// A standard trie form that often provides the fastest queries.
 pub struct Trie {
     pub(crate) mapper: CodeMapper,
@@ -245,7 +247,7 @@ impl Trie {
 
 impl Statistics for Trie {
     fn heap_bytes(&self) -> usize {
-        self.mapper.heap_bytes() + self.nodes.len() * std::mem::size_of::<Node>()
+        self.mapper.heap_bytes() + self.nodes.len() * core::mem::size_of::<Node>()
     }
 
     fn num_elems(&self) -> usize {

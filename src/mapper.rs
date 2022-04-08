@@ -1,3 +1,5 @@
+use alloc::vec::Vec;
+
 pub const INVALID_CODE: u32 = u32::MAX;
 
 #[derive(Default, Clone)]
@@ -42,6 +44,6 @@ impl CodeMapper {
 
     #[inline]
     pub fn heap_bytes(&self) -> usize {
-        self.table.len() * std::mem::size_of::<u32>()
+        self.table.len() * core::mem::size_of::<u32>()
     }
 }

@@ -9,17 +9,12 @@ homepage = "https://github.com/legalforce-research/crawdad"
 repository = "https://github.com/legalforce-research/crawdad"
 readme = "README.md"
 keywords = ["search", "text", "double-array", "trie"]
-categories = ["text-processing", "algorithms", "data-structures"]
+categories = ["text-processing", "algorithms", "data-structures", "no-std"]
 exclude = [".*"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-
-[features]
-default = ["std"]
-
-std = []
 
 [workspace]
 members = [

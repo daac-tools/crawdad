@@ -4,10 +4,13 @@
 //! The implementation is optimized for strings of multibyte-characters,
 //! and you can enjoy fast text processing on such strings such as Japanese or Chinese.
 #![deny(missing_docs)]
-#![cfg_attr(not(feature = "std"), no_std)]
+#![no_std]
 
 #[cfg(target_pointer_width = "16")]
 compile_error!("`target_pointer_width` must be larger than or equal to 32");
+
+#[macro_use]
+extern crate alloc;
 
 mod builder;
 pub mod errors;
@@ -16,7 +19,7 @@ pub mod mptrie;
 pub mod trie;
 mod utils;
 
-use std::ops::Range;
+use core::ops::Range;
 
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
 pub(crate) const INVALID_IDX: u32 = 0xffff_ffff;
