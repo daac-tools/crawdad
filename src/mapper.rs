@@ -35,7 +35,7 @@ impl CodeMapper {
     #[inline(always)]
     pub fn get(&self, c: char) -> Option<u32> {
         self.table
-            .get(c as usize)
+            .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
             .filter(|&code| code != INVALID_CODE)
     }

@@ -17,14 +17,14 @@ pub const fn pack_size(n: u32) -> u8 {
 /// Pushes the lowest `nbytes` bytes of `n` to `vec`.
 #[inline(always)]
 pub fn pack_u32(vec: &mut Vec<u8>, n: u32, nbytes: u8) {
-    vec.extend_from_slice(&n.to_le_bytes()[..nbytes as usize]);
+    vec.extend_from_slice(&n.to_le_bytes()[..usize::from(nbytes)]);
 }
 
 /// Extracts the head `nbytes` bytes of `slice`.
 #[inline(always)]
 pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
     let mut n_array = [0; 4];
-    n_array[..nbytes as usize].copy_from_slice(&slice[..nbytes as usize]);
+    n_array[..usize::from(nbytes)].copy_from_slice(&slice[..usize::from(nbytes)]);
     u32::from_le_bytes(n_array)
 }
 
