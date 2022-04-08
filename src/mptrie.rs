@@ -138,7 +138,7 @@ impl MpTrie {
             }
         }
 
-        let tail_pos = self.get_value(node_idx) as usize;
+        let tail_pos = usize::try_from(self.get_value(node_idx)).unwrap();
         let mut tail_iter = self.tail_iter(tail_pos);
 
         for tc in tail_iter.by_ref() {
@@ -231,7 +231,7 @@ impl MpTrie {
 
     #[inline(always)]
     fn tail_iter(&self, tail_pos: usize) -> TailIter {
-        let tail_len = self.tails[tail_pos] as usize;
+        let tail_len = usize::try_from(self.tails[tail_pos]).unwrap();
         TailIter {
             trie: self,
             pos: tail_pos + 1,
@@ -252,23 +252,28 @@ impl MpTrie {
     }
 
     #[inline(always)]
+    fn node_ref(&self, node_idx: u32) -> &Node {
+        &self.nodes[usize::try_from(node_idx).unwrap()]
+    }
+
+    #[inline(always)]
     fn get_base(&self, node_idx: u32) -> u32 {
-        self.nodes[node_idx as usize].get_base()
+        self.node_ref(node_idx).get_base()
     }
 
     #[inline(always)]
     fn get_check(&self, node_idx: u32) -> u32 {
-        self.nodes[node_idx as usize].get_check()
+        self.node_ref(node_idx).get_check()
     }
 
     #[inline(always)]
     fn is_leaf(&self, node_idx: u32) -> bool {
-        self.nodes[node_idx as usize].is_leaf()
+        self.node_ref(node_idx).is_leaf()
     }
 
     #[inline(always)]
     fn has_leaf(&self, node_idx: u32) -> bool {
-        self.nodes[node_idx as usize].has_leaf()
+        self.node_ref(node_idx).has_leaf()
     }
 
     #[inline(always)]
@@ -281,7 +286,7 @@ impl MpTrie {
     #[inline(always)]
     fn get_value(&self, node_idx: u32) -> u32 {
         debug_assert!(self.is_leaf(node_idx));
-        self.nodes[node_idx as usize].get_base()
+        self.node_ref(node_idx).get_base()
     }
 }
 
@@ -372,7 +377,7 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
             self.haystack_pos += 1;
 
             if self.trie.is_leaf(self.node_idx) {
-                let tail_pos = self.trie.get_value(self.node_idx) as usize;
+                let tail_pos = usize::try_from(self.trie.get_value(self.node_idx)).unwrap();
                 let mut tail_iter = self.trie.tail_iter(tail_pos);
 
                 for tc in tail_iter.by_ref() {
@@ -438,7 +443,7 @@ impl Iterator for TailIter<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.len != 0 {
             let c = utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.code_size);
-            self.pos += self.trie.code_size as usize;
+            self.pos += usize::try_from(self.trie.code_size).unwrap();
             self.len -= 1;
             Some(c)
         } else {

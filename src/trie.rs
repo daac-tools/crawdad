@@ -205,23 +205,28 @@ impl Trie {
     }
 
     #[inline(always)]
+    fn node_ref(&self, node_idx: u32) -> &Node {
+        &self.nodes[usize::try_from(node_idx).unwrap()]
+    }
+
+    #[inline(always)]
     fn get_base(&self, node_idx: u32) -> u32 {
-        self.nodes[node_idx as usize].get_base()
+        self.node_ref(node_idx).get_base()
     }
 
     #[inline(always)]
     fn get_check(&self, node_idx: u32) -> u32 {
-        self.nodes[node_idx as usize].get_check()
+        self.node_ref(node_idx).get_check()
     }
 
     #[inline(always)]
     fn is_leaf(&self, node_idx: u32) -> bool {
-        self.nodes[node_idx as usize].is_leaf()
+        self.node_ref(node_idx).is_leaf()
     }
 
     #[inline(always)]
     fn has_leaf(&self, node_idx: u32) -> bool {
-        self.nodes[node_idx as usize].has_leaf()
+        self.node_ref(node_idx).has_leaf()
     }
 
     #[inline(always)]
@@ -234,7 +239,7 @@ impl Trie {
     #[inline(always)]
     fn get_value(&self, node_idx: u32) -> u32 {
         debug_assert!(self.is_leaf(node_idx));
-        self.nodes[node_idx as usize].get_base()
+        self.node_ref(node_idx).get_base()
     }
 }
 
