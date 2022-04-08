@@ -205,23 +205,28 @@ impl Trie {
     }
 
     #[inline(always)]
+    fn node_ref(&self, node_idx: u32) -> &Node {
+        &self.nodes[usize::try_from(node_idx).unwrap()]
+    }
+
+    #[inline(always)]
     fn get_base(&self, node_idx: u32) -> u32 {
-        self.nodes[node_idx as usize].get_base()
+        self.node_ref(node_idx).get_base()
     }
 
     #[inline(always)]
     fn get_check(&self, node_idx: u32) -> u32 {
-        self.nodes[node_idx as usize].get_check()
+        self.node_ref(node_idx).get_check()
     }
 
     #[inline(always)]
     fn is_leaf(&self, node_idx: u32) -> bool {
-        self.nodes[node_idx as usize].is_leaf()
+        self.node_ref(node_idx).is_leaf()
     }
 
     #[inline(always)]
     fn has_leaf(&self, node_idx: u32) -> bool {
-        self.nodes[node_idx as usize].has_leaf()
+        self.node_ref(node_idx).has_leaf()
     }
 
     #[inline(always)]
@@ -234,7 +239,7 @@ impl Trie {
     #[inline(always)]
     fn get_value(&self, node_idx: u32) -> u32 {
         debug_assert!(self.is_leaf(node_idx));
-        self.nodes[node_idx as usize].get_base()
+        self.node_ref(node_idx).get_base()
     }
 }
 
@@ -355,7 +360,10 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
         for (i, key) in keys.iter().enumerate() {
-            assert_eq!(trie.exact_match(key.chars()), Some(i as u32));
+            assert_eq!(
+                trie.exact_match(key.chars()),
+                Some(u32::try_from(i).unwrap())
+            );
         }
         assert_eq!(trie.exact_match("世".chars()), None);
         assert_eq!(trie.exact_match("世論".chars()), None);

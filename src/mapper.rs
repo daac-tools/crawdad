@@ -16,13 +16,14 @@ impl CodeMapper {
             sorted.sort_unstable_by(|(c1, f1), (c2, f2)| f2.cmp(f1).then_with(|| c1.cmp(c2)));
             sorted
         };
+
         let mut table = vec![INVALID_CODE; freqs.len()];
         for (i, &(c, _)) in sorted.iter().enumerate() {
-            table[c] = i as u32;
+            table[c] = i.try_into().unwrap();
         }
         Self {
             table,
-            alphabet_size: sorted.len() as u32,
+            alphabet_size: sorted.len().try_into().unwrap(),
         }
     }
 
@@ -34,7 +35,7 @@ impl CodeMapper {
     #[inline(always)]
     pub fn get(&self, c: char) -> Option<u32> {
         self.table
-            .get(c as usize)
+            .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
             .filter(|&code| code != INVALID_CODE)
     }
