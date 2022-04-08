@@ -42,7 +42,6 @@ fn main() {
     println!("#keys: {}", keys.len());
 
     {
-        println!();
         println!("[crawdad/trie]");
         let start = Instant::now();
         let trie = crawdad::Trie::from_keys(&keys).unwrap();
@@ -90,7 +89,6 @@ fn main() {
     }
 
     {
-        println!();
         println!("[crawdad/mptrie]");
         let start = Instant::now();
         let trie = crawdad::MpTrie::from_keys(&keys).unwrap();
@@ -138,8 +136,7 @@ fn main() {
     }
 
     {
-        println!();
-        println!("[yada]");
+        println!("[yada/DoubleArray]");
         let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys
@@ -191,7 +188,6 @@ fn main() {
     }
 
     {
-        println!();
         println!("[fst/map]");
         let start = Instant::now();
         let map = fst::raw::Fst::from_iter_map(
@@ -240,7 +236,6 @@ fn main() {
     }
 
     {
-        println!();
         println!("[daachorse/DoubleArrayAhoCorasick]");
         let start = Instant::now();
         let pma = daachorse::DoubleArrayAhoCorasick::new(&keys).unwrap();
@@ -267,7 +262,6 @@ fn main() {
     }
 
     {
-        println!();
         println!("[daachorse/charwise/CharwiseDoubleArrayAhoCorasick]");
         let start = Instant::now();
         let pma = daachorse::charwise::CharwiseDoubleArrayAhoCorasick::new(&keys).unwrap();
