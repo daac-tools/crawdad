@@ -201,7 +201,7 @@ fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], 
         });
     });
 
-    group.bench_function("daachorse/DoubleArrayAhoCorasick", |b| {
+    group.bench_function("daachorse/bytewise", |b| {
         let pma = daachorse::DoubleArrayAhoCorasick::new(keys).unwrap();
         b.iter(|| {
             let mut dummy = 0;
