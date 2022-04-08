@@ -25,19 +25,6 @@ fn criterion_unidic_exact(c: &mut Criterion) {
     add_exact_match_benches(&mut group, &keys, &queries);
 }
 
-fn criterion_ipadic_exact(c: &mut Criterion) {
-    let mut group = c.benchmark_group("ipadic/exact");
-    group.sample_size(SAMPLE_SIZE);
-    group.warm_up_time(WARM_UP_TIME);
-    group.measurement_time(MEASURE_TIME);
-    group.sampling_mode(SamplingMode::Flat);
-    let mut keys = load_file("data/ipadic.txt");
-    keys.sort_unstable();
-    let queries = load_file("data/ipadic.1k.queries");
-
-    add_exact_match_benches(&mut group, &keys, &queries);
-}
-
 fn criterion_unidic_enumerate(c: &mut Criterion) {
     let mut group = c.benchmark_group("unidic/cps");
     group.sample_size(SAMPLE_SIZE);
@@ -45,19 +32,6 @@ fn criterion_unidic_enumerate(c: &mut Criterion) {
     group.measurement_time(MEASURE_TIME);
     group.sampling_mode(SamplingMode::Flat);
     let mut keys = load_file("data/unidic/unidic");
-    keys.sort_unstable();
-    let texts = load_file("data/wagahaiwa_nekodearu.txt");
-
-    add_enumerate_benches(&mut group, &keys, &texts);
-}
-
-fn criterion_ipadic_enumerate(c: &mut Criterion) {
-    let mut group = c.benchmark_group("ipadic/cps");
-    group.sample_size(SAMPLE_SIZE);
-    group.warm_up_time(WARM_UP_TIME);
-    group.measurement_time(MEASURE_TIME);
-    group.sampling_mode(SamplingMode::Flat);
-    let mut keys = load_file("data/ipadic.txt");
     keys.sort_unstable();
     let texts = load_file("data/wagahaiwa_nekodearu.txt");
 
@@ -294,11 +268,5 @@ fn fst_common_prefix_search<'a>(
         })
 }
 
-criterion_group!(
-    benches,
-    criterion_unidic_exact,
-    criterion_unidic_enumerate,
-    criterion_ipadic_exact,
-    criterion_ipadic_enumerate,
-);
+criterion_group!(benches, criterion_unidic_exact, criterion_unidic_enumerate);
 criterion_main!(benches);
