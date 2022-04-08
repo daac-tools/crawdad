@@ -14,7 +14,7 @@ Here provides benchmark tools to compare the performance of the data structures:
 You can measure search time and memory usage with your datasets in the following command.
 
 ```
-$ cargo run --release -- -k data/unidic/unidic -t data/wagahaiwa_nekodearu.txt
+$ cargo run --release --bin measure -- -k data/unidic/unidic -t data/wagahaiwa_nekodearu.txt
 ```
 
 Or, you can measure search time more accurately with [`criterion.rs`](https://github.com/bheisler/criterion.rs) in the following command.
