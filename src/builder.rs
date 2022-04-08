@@ -121,21 +121,21 @@ impl Builder {
             }
 
             debug_assert_eq!(nodes[node_idx].check & !OFFSET_MASK, 0);
-            let parent_idx = nodes[node_idx].check as usize;
-            let suf_idx = (nodes[node_idx].base & OFFSET_MASK) as usize;
+            let parent_idx = usize::try_from(nodes[node_idx].check).unwrap();
+            let suf_idx = usize::try_from(nodes[node_idx].base & OFFSET_MASK).unwrap();
             let suffix = &suffixes[suf_idx];
 
             // HasLeaf?
             if nodes[parent_idx].has_leaf() {
                 // `node_idx` is indicated from `parent_idx` with END_CODE?
-                if nodes[parent_idx].base as usize == node_idx {
+                if usize::try_from(nodes[parent_idx].base).unwrap() == node_idx {
                     assert!(suffix.key.is_empty());
                     nodes[node_idx].base = suffix.value | !OFFSET_MASK;
                     continue;
                 }
             }
 
-            let tail_start = if tails.len() <= OFFSET_MASK as usize {
+            let tail_start = if tails.len() <= usize::try_from(OFFSET_MASK).unwrap() {
                 u32::try_from(tails.len()).unwrap()
             } else {
                 return Err(CrawdadError::scale("length of tails", OFFSET_MASK));
@@ -171,7 +171,8 @@ impl Builder {
 
     fn init_array(&mut self) {
         self.nodes.clear();
-        self.nodes.resize(self.block_len as usize, Node::default());
+        self.nodes
+            .resize(usize::try_from(self.block_len).unwrap(), Node::default());
 
         for i in 0..self.block_len {
             if i == 0 {
@@ -204,12 +205,12 @@ impl Builder {
                 // It has been checked in build_from_records().
                 debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
 
-                let suffix_idx = if suffixes.len() <= OFFSET_MASK as usize {
+                let suffix_idx = if suffixes.len() <= usize::try_from(OFFSET_MASK).unwrap() {
                     u32::try_from(suffixes.len()).unwrap()
                 } else {
                     return Err(CrawdadError::scale("length of suffixes", OFFSET_MASK));
                 };
-                self.nodes[node_idx as usize].base = suffix_idx | !OFFSET_MASK;
+                self.nodes[usize::try_from(node_idx).unwrap()].base = suffix_idx | !OFFSET_MASK;
                 suffixes.push(Suffix {
                     key: pop_end_marker(&self.records[spos].key[depth..]),
                     value: self.records[spos].value,
@@ -221,7 +222,7 @@ impl Builder {
             // It has been checked in build_from_records().
             debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
             // Sets IsLeaf = True
-            self.nodes[node_idx as usize].base = self.records[spos].value | !OFFSET_MASK;
+            self.node_mut(node_idx).base = self.records[spos].value | !OFFSET_MASK;
             // Note: HasLeaf must not be set here and should be set in finish()
             // because MSB of check is used to indicate vacant element.
             return Ok(());
@@ -247,30 +248,30 @@ impl Builder {
     }
 
     fn finish(&mut self) {
-        self.nodes[0].check = OFFSET_MASK;
+        self.node_mut(0).check = OFFSET_MASK;
         if self.head_idx != INVALID_IDX {
             let mut node_idx = self.head_idx;
             loop {
                 let next_idx = self.get_next(node_idx);
-                self.nodes[node_idx as usize].base = OFFSET_MASK;
-                self.nodes[node_idx as usize].check = OFFSET_MASK;
+                self.node_mut(node_idx).base = OFFSET_MASK;
+                self.node_mut(node_idx).check = OFFSET_MASK;
                 node_idx = next_idx;
                 if node_idx == self.head_idx {
                     break;
                 }
             }
         }
-        for node_idx in 0..self.nodes.len() {
-            if self.nodes[node_idx].is_vacant() {
+        for node_idx in 0..self.num_nodes() {
+            if self.node_ref(node_idx).is_vacant() {
                 continue;
             }
-            if self.nodes[node_idx].is_leaf() {
+            if self.node_ref(node_idx).is_leaf() {
                 continue;
             }
-            let end_idx = self.nodes[node_idx].base ^ END_CODE;
-            if self.nodes[end_idx as usize].check as usize == node_idx {
+            let end_idx = self.node_ref(node_idx).base ^ END_CODE;
+            if self.node_ref(end_idx).check == node_idx {
                 // Sets HasLeaf = True
-                self.nodes[node_idx].check |= !OFFSET_MASK;
+                self.node_mut(node_idx).check |= !OFFSET_MASK;
             }
         }
     }
@@ -295,11 +296,11 @@ impl Builder {
             self.enlarge()?;
         }
 
-        self.nodes[node_idx as usize].base = base;
+        self.node_mut(node_idx).base = base;
         for i in 0..self.labels.len() {
             let child_idx = base ^ self.labels[i];
             self.fix_node(child_idx);
-            self.nodes[child_idx as usize].check = node_idx;
+            self.node_mut(child_idx).check = node_idx;
         }
         Ok(base)
     }
@@ -386,42 +387,52 @@ impl Builder {
         Ok(())
     }
 
+    #[inline(always)]
+    fn node_ref(&self, i: u32) -> &Node {
+        &self.nodes[usize::try_from(i).unwrap()]
+    }
+
+    #[inline(always)]
+    fn node_mut(&mut self, i: u32) -> &mut Node {
+        &mut self.nodes[usize::try_from(i).unwrap()]
+    }
+
     // If the most significant bit is unset, the state is fixed.
     #[inline(always)]
     fn is_fixed(&self, i: u32) -> bool {
-        self.nodes[i as usize].check & !OFFSET_MASK == 0
+        self.node_ref(i).check & !OFFSET_MASK == 0
     }
 
     // Unset the most significant bit.
     #[inline(always)]
     fn set_fixed(&mut self, i: u32) {
         debug_assert!(!self.is_fixed(i));
-        self.nodes[i as usize].base = INVALID_IDX;
-        self.nodes[i as usize].check &= OFFSET_MASK;
+        self.node_mut(i).base = INVALID_IDX;
+        self.node_mut(i).check &= OFFSET_MASK;
     }
 
     #[inline(always)]
     fn get_next(&self, i: u32) -> u32 {
-        debug_assert_ne!(self.nodes[i as usize].base & !OFFSET_MASK, 0);
-        self.nodes[i as usize].base & OFFSET_MASK
+        debug_assert_ne!(self.node_ref(i).base & !OFFSET_MASK, 0);
+        self.node_ref(i).base & OFFSET_MASK
     }
 
     #[inline(always)]
     fn get_prev(&self, i: u32) -> u32 {
-        debug_assert_ne!(self.nodes[i as usize].check & !OFFSET_MASK, 0);
-        self.nodes[i as usize].check & OFFSET_MASK
+        debug_assert_ne!(self.node_ref(i).check & !OFFSET_MASK, 0);
+        self.node_ref(i).check & OFFSET_MASK
     }
 
     #[inline(always)]
     fn set_next(&mut self, i: u32, x: u32) {
         debug_assert_eq!(x & !OFFSET_MASK, 0);
-        self.nodes[i as usize].base = x | !OFFSET_MASK
+        self.node_mut(i).base = x | !OFFSET_MASK
     }
 
     #[inline(always)]
     fn set_prev(&mut self, i: u32, x: u32) {
         debug_assert_eq!(x & !OFFSET_MASK, 0);
-        self.nodes[i as usize].check = x | !OFFSET_MASK
+        self.node_mut(i).check = x | !OFFSET_MASK
     }
 }
 
@@ -429,17 +440,18 @@ fn make_freqs(records: &[Record]) -> Result<Vec<u32>> {
     let mut freqs = vec![];
     for rec in records {
         for &c in &rec.key {
-            let c = c as usize;
+            let c = usize::try_from(u32::from(c)).unwrap();
             if freqs.len() <= c {
                 freqs.resize(c + 1, 0);
             }
             freqs[c] += 1;
         }
     }
-    if freqs[END_MARKER as usize] != 0 {
+    let end_marker = usize::try_from(u32::from(END_MARKER)).unwrap();
+    if freqs[end_marker] != 0 {
         Err(CrawdadError::input("END_MARKER must not be contained."))
     } else {
-        freqs[END_MARKER as usize] = u32::MAX;
+        freqs[end_marker] = u32::MAX;
         Ok(freqs)
     }
 }
