@@ -259,11 +259,7 @@ fn fst_common_prefix_search<'a>(
             },
         )
         .filter_map(|(is_final, pattern_len, pattern_id)| {
-            if is_final {
-                Some((pattern_id, pattern_len))
-            } else {
-                None
-            }
+            is_final.then(|| (pattern_id, pattern_len))
         })
 }
 
