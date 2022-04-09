@@ -32,12 +32,10 @@ fn main() {
         keys
     };
     let queries = random_sample(&keys);
-    let texts = if let Some(texts_filename) = args.texts_filename {
+    let texts = args.texts_filename.map(|texts_filename| {
         println!("texts_filename: {}", &texts_filename);
-        Some(load_file(&texts_filename))
-    } else {
-        None
-    };
+        load_file(&texts_filename)
+    });
 
     println!("#keys: {}", keys.len());
 
