@@ -134,7 +134,7 @@ fn main() {
     }
 
     {
-        println!("[yada/DoubleArray]");
+        println!("[yada]");
         let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys
@@ -234,7 +234,7 @@ fn main() {
     }
 
     {
-        println!("[daachorse/DoubleArrayAhoCorasick]");
+        println!("[daachorse/bytewise]");
         let start = Instant::now();
         let pma = daachorse::DoubleArrayAhoCorasick::new(&keys).unwrap();
         let duration = start.elapsed();
@@ -260,7 +260,7 @@ fn main() {
     }
 
     {
-        println!("[daachorse/charwise/CharwiseDoubleArrayAhoCorasick]");
+        println!("[daachorse/charwise]");
         let start = Instant::now();
         let pma = daachorse::charwise::CharwiseDoubleArrayAhoCorasick::new(&keys).unwrap();
         let duration = start.elapsed();
