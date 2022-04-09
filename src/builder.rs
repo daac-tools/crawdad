@@ -3,7 +3,9 @@ use crate::mapper::CodeMapper;
 use crate::{utils, MpTrie, Node, Trie};
 use crate::{END_CODE, END_MARKER, INVALID_IDX, MAX_VALUE, OFFSET_MASK};
 
-use std::cmp::Ordering;
+use core::cmp::Ordering;
+
+use alloc::vec::Vec;
 
 #[derive(Default)]
 struct Record {
