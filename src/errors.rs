@@ -1,5 +1,5 @@
 //! Definition of errors.
-use std::{fmt, result};
+use core::{fmt, result};
 
 /// A specialized Result type for Crawdad.
 pub type Result<T, E = CrawdadError> = result::Result<T, E>;
