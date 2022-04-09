@@ -248,7 +248,7 @@ fn fst_common_prefix_search<'a>(
     text.iter()
         .scan(
             (0, fst.root(), fst::raw::Output::zero()),
-           |(pattern_len, node, output), &byte| {
+            |(pattern_len, node, output), &byte| {
                 node.find_input(byte).map(|b_index| {
                     let transition = node.transition(b_index);
                     *pattern_len += 1;
