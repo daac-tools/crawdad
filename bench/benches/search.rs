@@ -249,14 +249,13 @@ fn fst_common_prefix_search<'a>(
         .scan(
             (0, fst.root(), fst::raw::Output::zero()),
             move |(pattern_len, node, output), &byte| {
-                if let Some(b_index) = node.find_input(byte) {
+                node.find_input(byte).map(|b_index| {
                     let transition = node.transition(b_index);
                     *pattern_len += 1;
                     *output = output.cat(transition.out);
                     *node = fst.node(transition.addr);
-                    return Some((node.is_final(), *pattern_len, output.value()));
-                }
-                None
+                    (node.is_final(), *pattern_len, output.value())
+                })
             },
         )
         .filter_map(|(is_final, pattern_len, pattern_id)| {
