@@ -1,12 +1,12 @@
 [package]
 name = "crawdad"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Shunsuke Kanda <shnsk.knd@gmail.com>"]
 description = "Crawdad: ChaRActer-Wise Double-Array Dictionary"
 license = "MIT OR Apache-2.0"
-homepage = "https://github.com/legalforce-research/crawdad"
-repository = "https://github.com/legalforce-research/crawdad"
+homepage = "https://github.com/daac-tools/crawdad"
+repository = "https://github.com/daac-tools/crawdad"
 readme = "README.md"
 keywords = ["search", "text", "double-array", "trie"]
 categories = ["text-processing", "algorithms", "data-structures", "no-std"]

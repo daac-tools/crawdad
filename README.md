@@ -1,5 +1,9 @@
 # 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 
+[![Crates.io](https://img.shields.io/crates/v/crawdad)](https://crates.io/crates/crawdad)
+[![Documentation](https://docs.rs/crawdad/badge.svg)](https://docs.rs/crawdad)
+![Build Status](https://github.com/daac-tools/crawdad/actions/workflows/rust.yml/badge.svg)
+
 ## Overview
 
 Crawdad is a library of natural language dictionaries using character-wise double-array tries.
@@ -9,7 +13,7 @@ and you can enjoy fast text processing on such strings such as Japanese or Chine
 ### What can do
 
 - **Key-value mapping**: Crawdad stores a set of string keys with mapping arbitrary integer values.
-- **Exact match**: Crawdad supports a fast lookup query for an input key.
+- **Exact match**: Crawdad supports a fast lookup for an input key.
 - **Common prefix search**: Crawdad supports fast *common prefix search* that can be used to enumerate all keys appearing in a text.
 
 ### Data structures
