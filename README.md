@@ -8,7 +8,9 @@
 
 Crawdad is a library of natural language dictionaries using character-wise double-array tries.
 The implementation is optimized for strings of multibyte-characters,
-and you can enjoy fast text processing on such strings such as Japanese or Chinese.
+and you can enjoy fast text processing on strings such as Japanese or Chinese.
+
+Experimental results can be found in [Wiki](https://github.com/daac-tools/crawdad/wiki/Performance-Comparison).
 
 ### What can do
 
@@ -22,6 +24,17 @@ Crawdad contains the three trie implementations:
 
 - `crawdad::Trie` is a standard trie form that often provides the fastest queries.
 - `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings. 
+
+## Installation
+
+To use `crawdad`, depend on it in your Cargo manifest:
+
+```toml
+# Cargo.toml
+
+[dependencies]
+crawdad = "0.1"
+```
 
 ## Disclaimer
 
