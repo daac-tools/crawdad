@@ -8,6 +8,8 @@ use crate::END_CODE;
 
 use alloc::vec::Vec;
 
+use core::mem::size_of;
+
 /// A minimal-prefix trie form that is memory-efficient for long strings.
 pub struct MpTrie {
     pub(crate) mapper: CodeMapper,
@@ -297,6 +299,10 @@ impl Statistics for MpTrie {
         self.mapper.heap_bytes()
             + self.nodes.len() * core::mem::size_of::<Node>()
             + self.tails.len() * core::mem::size_of::<u8>()
+    }
+
+    fn io_bytes(&self) -> usize {
+        self.mapper.io_bytes() + self.nodes.len() * size_of::<Node>() + size_of::<u32>()
     }
 
     fn num_elems(&self) -> usize {

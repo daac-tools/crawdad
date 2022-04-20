@@ -22,6 +22,8 @@ pub mod mptrie;
 pub mod trie;
 mod utils;
 
+use alloc::vec::Vec;
+
 use core::ops::Range;
 
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
@@ -40,6 +42,9 @@ pub trait Statistics {
     /// Returns the total amount of heap used by this automaton in bytes.
     fn heap_bytes(&self) -> usize;
 
+    /// Returns the total amount of bytes to serialize the data structure.
+    fn io_bytes(&self) -> usize;
+
     /// Returns the number of reserved elements.
     fn num_elems(&self) -> usize;
 
@@ -50,6 +55,49 @@ pub trait Statistics {
     fn vacant_ratio(&self) -> f64 {
         self.num_vacants() as f64 / self.num_elems() as f64
     }
+}
+
+/// Trait to serialize/deserialize the data structure.
+pub trait Serializer {
+    /// Serializes the data structure into a [`Vec`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{Trie, Serializer};
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = Trie::from_keys(&keys).unwrap();
+    /// let bytes = trie.serialize_to_vec();
+    /// ```
+    fn serialize_to_vec(&self) -> Vec<u8>;
+
+    /// Deserializes the data structure from a given byte slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `source` - A source byte slice.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the data structure and the slice not used for the deserialization.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{Trie, Serializer, Statistics};
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = Trie::from_keys(&keys).unwrap();
+    ///
+    /// let bytes = trie.serialize_to_vec();
+    /// let (other, _) = Trie::deserialize_from_slice(&bytes);
+    ///
+    /// assert_eq!(trie.io_bytes(), other.io_bytes());
+    /// ```
+    fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8])
+    where
+        Self: core::marker::Sized;
 }
 
 /// Result of common prefix search.
@@ -129,5 +177,21 @@ impl Node {
     #[inline(always)]
     pub const fn is_vacant(&self) -> bool {
         self.base == OFFSET_MASK && self.check == OFFSET_MASK
+    }
+
+    #[inline(always)]
+    fn serialize(&self) -> [u8; 8] {
+        let mut bytes = [0; 8];
+        bytes[0..4].copy_from_slice(&self.base.to_le_bytes());
+        bytes[4..8].copy_from_slice(&self.check.to_le_bytes());
+        bytes
+    }
+
+    #[inline(always)]
+    fn deserialize(bytes: [u8; 8]) -> Self {
+        Self {
+            base: u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
+            check: u32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+        }
     }
 }
