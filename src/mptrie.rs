@@ -564,4 +564,22 @@ mod tests {
             vec![(0, 0, 2, 0, 6), (1, 0, 3, 0, 9), (2, 6, 10, 18, 30)]
         );
     }
+
+    #[test]
+    fn test_serialize() {
+        let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
+        let trie = MpTrie::from_keys(&keys).unwrap();
+
+        let bytes = trie.serialize_to_vec();
+        assert_eq!(trie.io_bytes(), bytes.len());
+
+        let (other, remain) = MpTrie::deserialize_from_slice(&bytes);
+        assert!(remain.is_empty());
+
+        assert_eq!(trie.mapper, other.mapper);
+        assert_eq!(trie.nodes, other.nodes);
+        assert_eq!(trie.tails, other.tails);
+        assert_eq!(trie.code_size, other.code_size);
+        assert_eq!(trie.value_size, other.value_size);
+    }
 }

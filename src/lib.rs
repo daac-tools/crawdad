@@ -147,7 +147,7 @@ struct MappedChar {
     end_bytes: usize,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Node {
     base: u32,
     check: u32,
