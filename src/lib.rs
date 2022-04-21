@@ -40,6 +40,9 @@ pub trait Statistics {
     /// Returns the total amount of heap used by this automaton in bytes.
     fn heap_bytes(&self) -> usize;
 
+    /// Returns the total amount of bytes to serialize the data structure.
+    fn io_bytes(&self) -> usize;
+
     /// Returns the number of reserved elements.
     fn num_elems(&self) -> usize;
 
@@ -99,7 +102,7 @@ struct MappedChar {
     end_bytes: usize,
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Node {
     base: u32,
     check: u32,
@@ -129,5 +132,25 @@ impl Node {
     #[inline(always)]
     pub const fn is_vacant(&self) -> bool {
         self.base == OFFSET_MASK && self.check == OFFSET_MASK
+    }
+
+    pub const fn io_bytes() -> usize {
+        8
+    }
+
+    #[inline(always)]
+    fn serialize(&self) -> [u8; 8] {
+        let mut bytes = [0; 8];
+        bytes[0..4].copy_from_slice(&self.base.to_le_bytes());
+        bytes[4..8].copy_from_slice(&self.check.to_le_bytes());
+        bytes
+    }
+
+    #[inline(always)]
+    fn deserialize(bytes: [u8; 8]) -> Self {
+        Self {
+            base: u32::from_le_bytes(bytes[0..4].try_into().unwrap()),
+            check: u32::from_le_bytes(bytes[4..8].try_into().unwrap()),
+        }
     }
 }

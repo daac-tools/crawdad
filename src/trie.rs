@@ -8,6 +8,8 @@ use crate::END_CODE;
 
 use alloc::vec::Vec;
 
+use core::mem::size_of;
+
 /// A standard trie form that often provides the fastest queries.
 pub struct Trie {
     pub(crate) mapper: CodeMapper,
@@ -86,6 +88,67 @@ impl Trie {
         K: AsRef<str>,
     {
         Builder::new().build_from_records(records)?.release_trie()
+    }
+
+    /// Serializes the data structure into a [`Vec`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::Trie;
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = Trie::from_keys(&keys).unwrap();
+    /// let bytes = trie.serialize_to_vec();
+    /// ```
+    pub fn serialize_to_vec(&self) -> Vec<u8> {
+        let mut dest = Vec::with_capacity(self.io_bytes());
+        self.mapper.serialize_into_vec(&mut dest);
+        dest.extend_from_slice(&u32::try_from(self.nodes.len()).unwrap().to_le_bytes());
+        for node in &self.nodes {
+            dest.extend_from_slice(&node.serialize());
+        }
+        dest
+    }
+
+    /// Deserializes the data structure from a given byte slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `source` - A source byte slice.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the data structure and the slice not used for the deserialization.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{Trie, Statistics};
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = Trie::from_keys(&keys).unwrap();
+    ///
+    /// let bytes = trie.serialize_to_vec();
+    /// let (other, _) = Trie::deserialize_from_slice(&bytes);
+    ///
+    /// assert_eq!(trie.io_bytes(), other.io_bytes());
+    /// ```
+    pub fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8]) {
+        let (mapper, mut source) = CodeMapper::deserialize_from_slice(source);
+        let nodes = {
+            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
+            source = &source[4..];
+            let mut nodes = Vec::with_capacity(len);
+            for _ in 0..len {
+                nodes.push(Node::deserialize(
+                    source[..Node::io_bytes()].try_into().unwrap(),
+                ));
+                source = &source[Node::io_bytes()..];
+            }
+            nodes
+        };
+        (Self { mapper, nodes }, source)
     }
 
     /// Returns a value associated with an input key if exists.
@@ -247,7 +310,11 @@ impl Trie {
 
 impl Statistics for Trie {
     fn heap_bytes(&self) -> usize {
-        self.mapper.heap_bytes() + self.nodes.len() * core::mem::size_of::<Node>()
+        self.mapper.heap_bytes() + self.nodes.len() * size_of::<Node>()
+    }
+
+    fn io_bytes(&self) -> usize {
+        self.mapper.io_bytes() + self.nodes.len() * Node::io_bytes() + size_of::<u32>()
     }
 
     fn num_elems(&self) -> usize {
@@ -400,5 +467,20 @@ mod tests {
             matches,
             vec![(0, 0, 2, 0, 6), (1, 0, 3, 0, 9), (2, 6, 10, 18, 30)]
         );
+    }
+
+    #[test]
+    fn test_serialize() {
+        let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
+        let trie = Trie::from_keys(&keys).unwrap();
+
+        let bytes = trie.serialize_to_vec();
+        assert_eq!(trie.io_bytes(), bytes.len());
+
+        let (other, remain) = Trie::deserialize_from_slice(&bytes);
+        assert!(remain.is_empty());
+
+        assert_eq!(trie.mapper, other.mapper);
+        assert_eq!(trie.nodes, other.nodes);
     }
 }
