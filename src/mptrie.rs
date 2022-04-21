@@ -209,15 +209,10 @@ impl MpTrie {
 
         while !self.is_leaf(node_idx) {
             if let Some(c) = chars.next() {
-                if let Some(child_idx) = self
+                node_idx = self
                     .mapper
                     .get(c)
-                    .and_then(|mc| self.get_child_idx(node_idx, mc))
-                {
-                    node_idx = child_idx;
-                } else {
-                    return None;
-                }
+                    .and_then(|mc| self.get_child_idx(node_idx, mc))?;
             } else if self.has_leaf(node_idx) {
                 return Some(self.get_value(self.get_leaf_idx(node_idx)));
             } else {
@@ -324,11 +319,8 @@ impl MpTrie {
         if self.is_leaf(node_idx) {
             return None;
         }
-        let child_idx = self.get_base(node_idx) ^ mc;
-        if self.get_check(child_idx) == node_idx {
-            return Some(child_idx);
-        }
-        None
+        Some(self.get_base(node_idx) ^ mc)
+            .filter(|&child_idx| self.get_check(child_idx) == node_idx)
     }
 
     #[inline(always)]
