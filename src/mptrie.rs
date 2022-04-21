@@ -616,4 +616,30 @@ mod tests {
         assert_eq!(trie.code_size, other.code_size);
         assert_eq!(trie.value_size, other.value_size);
     }
+
+    #[test]
+    fn test_empty_set() {
+        assert!(MpTrie::from_keys(&[""][0..0]).is_err());
+    }
+
+    #[test]
+    fn test_empty_char() {
+        assert!(MpTrie::from_keys([""]).is_err());
+    }
+
+    #[test]
+    fn test_empty_key() {
+        assert!(MpTrie::from_keys(["", "AAA"]).is_err());
+    }
+
+    #[test]
+    fn test_unsorted_keys() {
+        assert!(MpTrie::from_keys(["BB", "AA"]).is_err());
+        assert!(MpTrie::from_keys(["AAA", "AA"]).is_err());
+    }
+
+    #[test]
+    fn test_duplicate_keys() {
+        assert!(MpTrie::from_keys(["AA", "AA"]).is_err());
+    }
 }

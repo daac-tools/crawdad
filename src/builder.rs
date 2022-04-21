@@ -450,12 +450,15 @@ fn make_freqs(records: &[Record]) -> Result<Vec<u32>> {
         }
     }
     let end_marker = usize::try_from(u32::from(END_MARKER)).unwrap();
-    if freqs[end_marker] != 0 {
-        Err(CrawdadError::input("END_MARKER must not be contained."))
+    if let Some(&freq) = freqs.get(end_marker) {
+        if freq != 0 {
+            return Err(CrawdadError::input("END_MARKER must not be contained."));
+        }
     } else {
-        freqs[end_marker] = u32::MAX;
-        Ok(freqs)
+        return Err(CrawdadError::input("records must contain any character."));
     }
+    freqs[end_marker] = u32::MAX;
+    Ok(freqs)
 }
 
 fn make_prefix_free(records: &mut [Record]) -> Result<()> {
