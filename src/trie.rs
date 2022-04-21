@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{MappedChar, Match, Node, Statistics};
+use crate::{MappedChar, Match, Node};
 
 use crate::END_CODE;
 
@@ -40,7 +40,7 @@ impl Trie {
     /// # Examples
     ///
     /// ```
-    /// use crawdad::{Trie, Statistics};
+    /// use crawdad::Trie;
     ///
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(keys).unwrap();
@@ -75,7 +75,7 @@ impl Trie {
     /// # Examples
     ///
     /// ```
-    /// use crawdad::{Trie, Statistics};
+    /// use crawdad::Trie;
     ///
     /// let records = vec![("世界", 2), ("世界中", 3), ("国民", 2)];
     /// let trie = Trie::from_records(records).unwrap();
@@ -124,7 +124,7 @@ impl Trie {
     /// # Examples
     ///
     /// ```
-    /// use crawdad::{Trie, Statistics};
+    /// use crawdad::Trie;
     ///
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(&keys).unwrap();
@@ -306,22 +306,24 @@ impl Trie {
         debug_assert!(self.is_leaf(node_idx));
         self.node_ref(node_idx).get_base()
     }
-}
 
-impl Statistics for Trie {
-    fn heap_bytes(&self) -> usize {
+    /// Returns the total amount of heap used by this automaton in bytes.
+    pub fn heap_bytes(&self) -> usize {
         self.mapper.heap_bytes() + self.nodes.len() * size_of::<Node>()
     }
 
-    fn io_bytes(&self) -> usize {
+    /// Returns the total amount of bytes to serialize the data structure.
+    pub fn io_bytes(&self) -> usize {
         self.mapper.io_bytes() + self.nodes.len() * Node::io_bytes() + size_of::<u32>()
     }
 
-    fn num_elems(&self) -> usize {
+    /// Returns the number of reserved elements.
+    pub fn num_elems(&self) -> usize {
         self.nodes.len()
     }
 
-    fn num_vacants(&self) -> usize {
+    /// Returns the number of vacant elements.
+    pub fn num_vacants(&self) -> usize {
         self.nodes.iter().filter(|nd| nd.is_vacant()).count()
     }
 }
