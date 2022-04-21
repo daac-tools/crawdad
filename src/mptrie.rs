@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{utils, MappedChar, Match, Node, Serializer, Statistics};
+use crate::{utils, MappedChar, Match, Node, Statistics};
 
 use crate::END_CODE;
 
@@ -97,6 +97,89 @@ impl MpTrie {
             .minimal_prefix()
             .build_from_records(records)?
             .release_mptrie()
+    }
+
+    /// Serializes the data structure into a [`Vec`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::MpTrie;
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = MpTrie::from_keys(&keys).unwrap();
+    /// let bytes = trie.serialize_to_vec();
+    /// ```
+    pub fn serialize_to_vec(&self) -> Vec<u8> {
+        let mut dest = Vec::with_capacity(self.io_bytes());
+        self.mapper.serialize_into_vec(&mut dest);
+        dest.extend_from_slice(&u32::try_from(self.nodes.len()).unwrap().to_le_bytes());
+        for node in &self.nodes {
+            dest.extend_from_slice(&node.serialize());
+        }
+        dest.extend_from_slice(&u32::try_from(self.tails.len()).unwrap().to_le_bytes());
+        dest.extend_from_slice(&self.tails);
+        dest.extend_from_slice(&[self.code_size]);
+        dest.extend_from_slice(&[self.value_size]);
+        dest
+    }
+
+    /// Deserializes the data structure from a given byte slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `source` - A source byte slice.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the data structure and the slice not used for the deserialization.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{MpTrie, Statistics};
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = MpTrie::from_keys(&keys).unwrap();
+    ///
+    /// let bytes = trie.serialize_to_vec();
+    /// let (other, _) = MpTrie::deserialize_from_slice(&bytes);
+    ///
+    /// assert_eq!(trie.io_bytes(), other.io_bytes());
+    /// ```
+    pub fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8]) {
+        let (mapper, mut source) = CodeMapper::deserialize_from_slice(source);
+        let nodes = {
+            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
+            source = &source[4..];
+            let mut nodes = Vec::with_capacity(len);
+            for _ in 0..len {
+                nodes.push(Node::deserialize(
+                    source[..size_of::<Node>()].try_into().unwrap(),
+                ));
+                source = &source[size_of::<Node>()..];
+            }
+            nodes
+        };
+        let tails = {
+            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
+            source = &source[4..];
+            let tails = source[..len].to_vec();
+            source = &source[len..];
+            tails
+        };
+        let code_size = source[0];
+        let value_size = source[1];
+        (
+            Self {
+                mapper,
+                nodes,
+                tails,
+                code_size,
+                value_size,
+            },
+            &source[2..],
+        )
     }
 
     /// Returns a value associated with an input key if exists.
@@ -316,57 +399,6 @@ impl Statistics for MpTrie {
 
     fn num_vacants(&self) -> usize {
         self.nodes.iter().filter(|nd| nd.is_vacant()).count()
-    }
-}
-
-impl Serializer for MpTrie {
-    fn serialize_to_vec(&self) -> Vec<u8> {
-        let mut dest = Vec::with_capacity(self.io_bytes());
-        self.mapper.serialize_into_vec(&mut dest);
-        dest.extend_from_slice(&u32::try_from(self.nodes.len()).unwrap().to_le_bytes());
-        for node in &self.nodes {
-            dest.extend_from_slice(&node.serialize());
-        }
-        dest.extend_from_slice(&u32::try_from(self.tails.len()).unwrap().to_le_bytes());
-        dest.extend_from_slice(&self.tails);
-        dest.extend_from_slice(&[self.code_size]);
-        dest.extend_from_slice(&[self.value_size]);
-        dest
-    }
-
-    fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8]) {
-        let (mapper, mut source) = CodeMapper::deserialize_from_slice(source);
-        let nodes = {
-            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
-            source = &source[4..];
-            let mut nodes = Vec::with_capacity(len);
-            for _ in 0..len {
-                nodes.push(Node::deserialize(
-                    source[..size_of::<Node>()].try_into().unwrap(),
-                ));
-                source = &source[size_of::<Node>()..];
-            }
-            nodes
-        };
-        let tails = {
-            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
-            source = &source[4..];
-            let tails = source[..len].to_vec();
-            source = &source[len..];
-            tails
-        };
-        let code_size = source[0];
-        let value_size = source[1];
-        (
-            Self {
-                mapper,
-                nodes,
-                tails,
-                code_size,
-                value_size,
-            },
-            &source[2..],
-        )
     }
 }
 

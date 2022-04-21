@@ -22,8 +22,6 @@ pub mod mptrie;
 pub mod trie;
 mod utils;
 
-use alloc::vec::Vec;
-
 use core::ops::Range;
 
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
@@ -55,49 +53,6 @@ pub trait Statistics {
     fn vacant_ratio(&self) -> f64 {
         self.num_vacants() as f64 / self.num_elems() as f64
     }
-}
-
-/// Trait to serialize/deserialize the data structure.
-pub trait Serializer {
-    /// Serializes the data structure into a [`Vec`].
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crawdad::{Trie, Serializer};
-    ///
-    /// let keys = vec!["世界", "世界中", "国民"];
-    /// let trie = Trie::from_keys(&keys).unwrap();
-    /// let bytes = trie.serialize_to_vec();
-    /// ```
-    fn serialize_to_vec(&self) -> Vec<u8>;
-
-    /// Deserializes the data structure from a given byte slice.
-    ///
-    /// # Arguments
-    ///
-    /// * `source` - A source byte slice.
-    ///
-    /// # Returns
-    ///
-    /// A tuple of the data structure and the slice not used for the deserialization.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use crawdad::{Trie, Serializer, Statistics};
-    ///
-    /// let keys = vec!["世界", "世界中", "国民"];
-    /// let trie = Trie::from_keys(&keys).unwrap();
-    ///
-    /// let bytes = trie.serialize_to_vec();
-    /// let (other, _) = Trie::deserialize_from_slice(&bytes);
-    ///
-    /// assert_eq!(trie.io_bytes(), other.io_bytes());
-    /// ```
-    fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8])
-    where
-        Self: core::marker::Sized;
 }
 
 /// Result of common prefix search.

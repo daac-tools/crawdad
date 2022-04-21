@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{MappedChar, Match, Node, Serializer, Statistics};
+use crate::{MappedChar, Match, Node, Statistics};
 
 use crate::END_CODE;
 
@@ -88,6 +88,67 @@ impl Trie {
         K: AsRef<str>,
     {
         Builder::new().build_from_records(records)?.release_trie()
+    }
+
+    /// Serializes the data structure into a [`Vec`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::Trie;
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = Trie::from_keys(&keys).unwrap();
+    /// let bytes = trie.serialize_to_vec();
+    /// ```
+    pub fn serialize_to_vec(&self) -> Vec<u8> {
+        let mut dest = Vec::with_capacity(self.io_bytes());
+        self.mapper.serialize_into_vec(&mut dest);
+        dest.extend_from_slice(&u32::try_from(self.nodes.len()).unwrap().to_le_bytes());
+        for node in &self.nodes {
+            dest.extend_from_slice(&node.serialize());
+        }
+        dest
+    }
+
+    /// Deserializes the data structure from a given byte slice.
+    ///
+    /// # Arguments
+    ///
+    /// * `source` - A source byte slice.
+    ///
+    /// # Returns
+    ///
+    /// A tuple of the data structure and the slice not used for the deserialization.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use crawdad::{Trie, Statistics};
+    ///
+    /// let keys = vec!["世界", "世界中", "国民"];
+    /// let trie = Trie::from_keys(&keys).unwrap();
+    ///
+    /// let bytes = trie.serialize_to_vec();
+    /// let (other, _) = Trie::deserialize_from_slice(&bytes);
+    ///
+    /// assert_eq!(trie.io_bytes(), other.io_bytes());
+    /// ```
+    pub fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8]) {
+        let (mapper, mut source) = CodeMapper::deserialize_from_slice(source);
+        let nodes = {
+            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
+            source = &source[4..];
+            let mut nodes = Vec::with_capacity(len);
+            for _ in 0..len {
+                nodes.push(Node::deserialize(
+                    source[..size_of::<Node>()].try_into().unwrap(),
+                ));
+                source = &source[size_of::<Node>()..];
+            }
+            nodes
+        };
+        (Self { mapper, nodes }, source)
     }
 
     /// Returns a value associated with an input key if exists.
@@ -262,35 +323,6 @@ impl Statistics for Trie {
 
     fn num_vacants(&self) -> usize {
         self.nodes.iter().filter(|nd| nd.is_vacant()).count()
-    }
-}
-
-impl Serializer for Trie {
-    fn serialize_to_vec(&self) -> Vec<u8> {
-        let mut dest = Vec::with_capacity(self.io_bytes());
-        self.mapper.serialize_into_vec(&mut dest);
-        dest.extend_from_slice(&u32::try_from(self.nodes.len()).unwrap().to_le_bytes());
-        for node in &self.nodes {
-            dest.extend_from_slice(&node.serialize());
-        }
-        dest
-    }
-
-    fn deserialize_from_slice(source: &[u8]) -> (Self, &[u8]) {
-        let (mapper, mut source) = CodeMapper::deserialize_from_slice(source);
-        let nodes = {
-            let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
-            source = &source[4..];
-            let mut nodes = Vec::with_capacity(len);
-            for _ in 0..len {
-                nodes.push(Node::deserialize(
-                    source[..size_of::<Node>()].try_into().unwrap(),
-                ));
-                source = &source[size_of::<Node>()..];
-            }
-            nodes
-        };
-        (Self { mapper, nodes }, source)
     }
 }
 
