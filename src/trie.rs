@@ -485,4 +485,30 @@ mod tests {
         assert_eq!(trie.mapper, other.mapper);
         assert_eq!(trie.nodes, other.nodes);
     }
+
+    #[test]
+    fn test_empty_set() {
+        assert!(Trie::from_keys(&[""][0..0]).is_err());
+    }
+
+    #[test]
+    fn test_empty_char() {
+        assert!(Trie::from_keys([""]).is_err());
+    }
+
+    #[test]
+    fn test_empty_key() {
+        assert!(Trie::from_keys(["", "AAA"]).is_err());
+    }
+
+    #[test]
+    fn test_unsorted_keys() {
+        assert!(Trie::from_keys(["BB", "AA"]).is_err());
+        assert!(Trie::from_keys(["AAA", "AA"]).is_err());
+    }
+
+    #[test]
+    fn test_duplicate_keys() {
+        assert!(Trie::from_keys(["AA", "AA"]).is_err());
+    }
 }
