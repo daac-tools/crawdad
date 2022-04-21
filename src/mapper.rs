@@ -1,5 +1,7 @@
 use alloc::vec::Vec;
 
+use core::mem::size_of;
+
 pub const INVALID_CODE: u32 = u32::MAX;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
@@ -44,12 +46,12 @@ impl CodeMapper {
 
     #[inline]
     pub fn heap_bytes(&self) -> usize {
-        self.table.len() * core::mem::size_of::<u32>()
+        self.table.len() * size_of::<u32>()
     }
 
     #[inline]
     pub fn io_bytes(&self) -> usize {
-        self.heap_bytes() + core::mem::size_of::<u32>() * 2
+        self.table.len() * size_of::<u32>() + size_of::<u32>() * 2
     }
 
     pub fn serialize_into_vec(&self, dest: &mut Vec<u8>) {

@@ -142,9 +142,9 @@ impl Trie {
             let mut nodes = Vec::with_capacity(len);
             for _ in 0..len {
                 nodes.push(Node::deserialize(
-                    source[..size_of::<Node>()].try_into().unwrap(),
+                    source[..Node::io_bytes()].try_into().unwrap(),
                 ));
-                source = &source[size_of::<Node>()..];
+                source = &source[Node::io_bytes()..];
             }
             nodes
         };
@@ -314,7 +314,7 @@ impl Statistics for Trie {
     }
 
     fn io_bytes(&self) -> usize {
-        self.mapper.io_bytes() + self.nodes.len() * size_of::<Node>() + size_of::<u32>()
+        self.mapper.io_bytes() + self.nodes.len() * Node::io_bytes() + size_of::<u32>()
     }
 
     fn num_elems(&self) -> usize {

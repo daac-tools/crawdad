@@ -134,6 +134,10 @@ impl Node {
         self.base == OFFSET_MASK && self.check == OFFSET_MASK
     }
 
+    pub const fn io_bytes() -> usize {
+        8
+    }
+
     #[inline(always)]
     fn serialize(&self) -> [u8; 8] {
         let mut bytes = [0; 8];

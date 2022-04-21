@@ -155,9 +155,9 @@ impl MpTrie {
             let mut nodes = Vec::with_capacity(len);
             for _ in 0..len {
                 nodes.push(Node::deserialize(
-                    source[..size_of::<Node>()].try_into().unwrap(),
+                    source[..Node::io_bytes()].try_into().unwrap(),
                 ));
-                source = &source[size_of::<Node>()..];
+                source = &source[Node::io_bytes()..];
             }
             nodes
         };
@@ -380,15 +380,15 @@ impl MpTrie {
 impl Statistics for MpTrie {
     fn heap_bytes(&self) -> usize {
         self.mapper.heap_bytes()
-            + self.nodes.len() * core::mem::size_of::<Node>()
-            + self.tails.len() * core::mem::size_of::<u8>()
+            + self.nodes.len() * size_of::<Node>()
+            + self.tails.len() * size_of::<u8>()
     }
 
     fn io_bytes(&self) -> usize {
         self.mapper.io_bytes()
-            + self.nodes.len() * size_of::<Node>()
+            + self.nodes.len() * Node::io_bytes()
             + size_of::<u32>()
-            + self.tails.len() * core::mem::size_of::<u8>()
+            + self.tails.len() * size_of::<u8>()
             + size_of::<u32>()
             + size_of::<u8>() * 2
     }
