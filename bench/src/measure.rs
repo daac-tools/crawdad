@@ -5,8 +5,6 @@ use std::io::BufReader;
 use std::path::Path;
 use std::time::Instant;
 
-use crawdad::Statistics;
-
 use clap::Parser;
 
 const TRIALS: usize = 10;
@@ -47,7 +45,10 @@ fn main() {
         print_heap_bytes(trie.heap_bytes());
         println!("num_elems: {}", trie.num_elems());
         println!("num_vacants: {}", trie.num_vacants());
-        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
+        println!(
+            "vacant_ratio: {:.3}",
+            trie.num_vacants() as f64 / trie.num_elems() as f64
+        );
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
 
         {
@@ -94,7 +95,10 @@ fn main() {
         print_heap_bytes(trie.heap_bytes());
         println!("num_elems: {}", trie.num_elems());
         println!("num_vacants: {}", trie.num_vacants());
-        println!("vacant_ratio: {:.3}", trie.vacant_ratio());
+        println!(
+            "vacant_ratio: {:.3}",
+            trie.num_vacants() as f64 / trie.num_elems() as f64
+        );
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
 
         {
