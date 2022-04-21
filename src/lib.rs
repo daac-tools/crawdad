@@ -35,26 +35,6 @@ pub const END_MARKER: char = '\u{0}';
 pub use mptrie::MpTrie;
 pub use trie::Trie;
 
-/// Basic statistics of trie.
-pub trait Statistics {
-    /// Returns the total amount of heap used by this automaton in bytes.
-    fn heap_bytes(&self) -> usize;
-
-    /// Returns the total amount of bytes to serialize the data structure.
-    fn io_bytes(&self) -> usize;
-
-    /// Returns the number of reserved elements.
-    fn num_elems(&self) -> usize;
-
-    /// Returns the number of vacant elements.
-    fn num_vacants(&self) -> usize;
-
-    /// Returns the ratio of vacant elements.
-    fn vacant_ratio(&self) -> f64 {
-        self.num_vacants() as f64 / self.num_elems() as f64
-    }
-}
-
 /// Result of common prefix search.
 #[derive(Default, Clone)]
 pub struct Match {
