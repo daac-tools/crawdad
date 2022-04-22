@@ -175,15 +175,10 @@ impl Trie {
     {
         let mut node_idx = 0;
         for c in key {
-            if let Some(mc) = self.mapper.get(c) {
-                if let Some(child_idx) = self.get_child_idx(node_idx, mc) {
-                    node_idx = child_idx;
-                } else {
-                    return None;
-                }
-            } else {
-                return None;
-            }
+            node_idx = self
+                .mapper
+                .get(c)
+                .and_then(|mc| self.get_child_idx(node_idx, mc))?;
         }
         if self.is_leaf(node_idx) {
             Some(self.get_value(node_idx))
@@ -262,11 +257,8 @@ impl Trie {
         if self.is_leaf(node_idx) {
             return None;
         }
-        let child_idx = self.get_base(node_idx) ^ mc;
-        if self.get_check(child_idx) == node_idx {
-            return Some(child_idx);
-        }
-        None
+        Some(self.get_base(node_idx) ^ mc)
+            .filter(|&child_idx| self.get_check(child_idx) == node_idx)
     }
 
     #[inline(always)]
@@ -384,13 +376,8 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
     fn next(&mut self) -> Option<Self::Item> {
         while self.haystack_pos < self.haystack.len() {
             let mc = self.haystack[self.haystack_pos];
-            if let Some(c) = mc.c {
-                if let Some(child_idx) = self.trie.get_child_idx(self.node_idx, c) {
-                    self.node_idx = child_idx;
-                } else {
-                    self.haystack_pos = self.haystack.len();
-                    return None;
-                }
+            if let Some(child_idx) = mc.c.and_then(|c| self.trie.get_child_idx(self.node_idx, c)) {
+                self.node_idx = child_idx;
             } else {
                 self.haystack_pos = self.haystack.len();
                 return None;
