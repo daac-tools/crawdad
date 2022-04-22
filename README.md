@@ -20,7 +20,7 @@ Experimental results can be found in [Wiki](https://github.com/daac-tools/crawda
 
 ### Data structures
 
-Crawdad contains the three trie implementations:
+Crawdad contains the two trie implementations:
 
 - `crawdad::Trie` is a standard trie form that often provides the fastest queries.
 - `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings. 
