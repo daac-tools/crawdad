@@ -167,7 +167,7 @@ fn main() {
         let start = Instant::now();
         let mut map = std::collections::HashMap::new();
         for (i, key) in keys.iter().enumerate() {
-            map.insert(key.clone(), i as u32);
+            map.insert(key, i as u32);
         }
         let duration = start.elapsed();
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
