@@ -463,6 +463,8 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
                         return None;
                     }
                     let mc = self.haystack[self.haystack_pos];
+                    // TODO(vbkaisetsu): replace with is_some_with (nightly)
+                    // if !mc.c.is_some_with(|&c| c == tc) {
                     if mc.c.filter(|&c| c == tc).is_none() {
                         self.haystack_pos = self.haystack.len();
                         return None;
