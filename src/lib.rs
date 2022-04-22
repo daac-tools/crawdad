@@ -15,7 +15,7 @@
 //!
 //! ## Looking up an input key
 //!
-//! To get a value associated with an input key, use [`Trie::exact_match`].
+//! To get a value associated with an input key, use [`Trie::exact_match()`].
 //!
 //! ```
 //! use crawdad::Trie;
