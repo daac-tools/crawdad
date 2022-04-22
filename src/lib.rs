@@ -61,7 +61,7 @@
 //! ## Serializing and deserializing the data structure
 //!
 //! To serialize/deserialize the data structure into/from a byte sequence,
-//! use [`Trie::serialize_to_vec`]/[`Trie::deserialize_from_slice`].
+//! use [`Trie::serialize_to_vec()`]/[`Trie::deserialize_from_slice()`].
 //!
 //! ```
 //! use crawdad::Trie;
