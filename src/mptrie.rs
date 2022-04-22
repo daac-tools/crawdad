@@ -213,10 +213,10 @@ impl MpTrie {
                     .mapper
                     .get(c)
                     .and_then(|mc| self.get_child_idx(node_idx, mc))?;
-            } else if self.has_leaf(node_idx) {
-                return Some(self.get_value(self.get_leaf_idx(node_idx)));
             } else {
-                return None;
+                return self
+                    .has_leaf(node_idx)
+                    .then(|| self.get_value(self.get_leaf_idx(node_idx)));
             }
         }
 
@@ -230,11 +230,7 @@ impl MpTrie {
                 .filter(|&mc| mc == tc)?;
         }
 
-        if chars.next().is_some() {
-            None
-        } else {
-            Some(tail_iter.value())
-        }
+        chars.next().is_none().then(|| tail_iter.value())
     }
 
     /// Returns a common prefix searcher.
