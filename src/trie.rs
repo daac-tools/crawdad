@@ -212,15 +212,15 @@ impl Trie {
     ///     for m in searcher.search(i) {
     ///         matches.push((
     ///             m.value(),
-    ///             m.start_chars(), m.end_chars(),
-    ///             m.start_bytes(), m.end_bytes(),
+    ///             m.start_chars()..m.end_chars(),
+    ///             m.start_bytes()..m.end_bytes(),
     ///         ));
     ///     }
     /// }
     ///
     /// assert_eq!(
     ///     matches,
-    ///     vec![(2, 0, 2, 0, 6), (0, 3, 5, 9, 15), (1, 3, 6, 9, 18)]
+    ///     vec![(2, 0..2, 0..6), (0, 3..5, 9..15), (1, 3..6, 9..18)]
     /// );
     /// ```
     pub const fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
@@ -340,7 +340,7 @@ impl CommonPrefixSearcher<'_> {
         self.haystack.len()
     }
 
-    /// Creates an iterator to search for the haystack in the given range.
+    /// Creates an iterator to search for the haystack from the given position.
     pub fn search(&self, start: usize) -> CommonPrefixSearchIter {
         let start_chars = start;
         let start_bytes = if start_chars == 0 {
@@ -444,17 +444,15 @@ mod tests {
             for m in searcher.search(i) {
                 matches.push((
                     m.value(),
-                    m.start_chars(),
-                    m.end_chars(),
-                    m.start_bytes(),
-                    m.end_bytes(),
+                    m.start_chars()..m.end_chars(),
+                    m.start_bytes()..m.end_bytes(),
                 ));
             }
         }
 
         assert_eq!(
             matches,
-            vec![(0, 0, 2, 0, 6), (1, 0, 3, 0, 9), (2, 6, 10, 18, 30)]
+            vec![(0, 0..2, 0..6), (1, 0..3, 0..9), (2, 6..10, 18..30)]
         );
     }
 

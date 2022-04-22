@@ -3,6 +3,77 @@
 //! Crawdad is a library of natural language dictionaries using character-wise double-array tries.
 //! The implementation is optimized for strings of multibyte-characters,
 //! and you can enjoy fast text processing on such strings such as Japanese or Chinese.
+//!
+//! # Data structures
+//!
+//! Crawdad contains the two trie implementations:
+//!
+//! - [`Trie`] is a standard trie form that often provides the fastest queries.
+//! - [`MpTrie`] is a minimal-prefix trie form that is memory-efficient for long strings.
+//!
+//! # Examples
+//!
+//! ## Looking up an input key
+//!
+//! To get a value associated with an input key, use [`Trie::exact_match`].
+//!
+//! ```
+//! use crawdad::Trie;
+//!
+//! let keys = vec!["世界", "世界中", "国民"];
+//! let trie = Trie::from_keys(&keys).unwrap();
+//!
+//! assert_eq!(trie.exact_match("世界中".chars()), Some(1));
+//! assert_eq!(trie.exact_match("日本中".chars()), None);
+//! ```
+//!
+//! ## Finding all occurrences of keys in an input text
+//!
+//! To search for all occurrences of registered keys in an input text,
+//! use [`Trie::common_prefix_searcher`] for all starting positions in the text.
+//!
+//! ```
+//! use crawdad::Trie;
+//!
+//! let keys = vec!["世界", "世界中", "国民"];
+//! let trie = Trie::from_keys(&keys).unwrap();
+//!
+//! let mut searcher = trie.common_prefix_searcher();
+//! searcher.update_haystack("国民が世界中にて".chars());
+//!
+//! let mut matches = vec![];
+//! for i in 0..searcher.len_chars() {
+//!     for m in searcher.search(i) {
+//!         matches.push((
+//!             m.value(),
+//!             m.start_chars()..m.end_chars(),
+//!             m.start_bytes()..m.end_bytes(),
+//!         ));
+//!     }
+//! }
+//!
+//! assert_eq!(
+//!     matches,
+//!     vec![(2, 0..2, 0..6), (0, 3..5, 9..15), (1, 3..6, 9..18)]
+//! );
+//! ```
+//!
+//! ## Serializing and deserializing the data structure
+//!
+//! To serialize/deserialize the data structure into/from a byte sequence,
+//! use [`Trie::serialize_to_vec`]/[`Trie::deserialize_from_slice`].
+//!
+//! ```
+//! use crawdad::Trie;
+//!
+//! let keys = vec!["世界", "世界中", "国民"];
+//! let trie = Trie::from_keys(&keys).unwrap();
+//!
+//! let bytes = trie.serialize_to_vec();
+//! let (other, _) = Trie::deserialize_from_slice(&bytes);
+//!
+//! assert_eq!(trie.io_bytes(), other.io_bytes());
+//! ```
 #![deny(missing_docs)]
 #![no_std]
 
