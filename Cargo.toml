@@ -1,6 +1,6 @@
 [package]
 name = "crawdad"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 authors = ["Shunsuke Kanda <shnsk.knd@gmail.com>"]
 description = "Crawdad: ChaRActer-Wise Double-Array Dictionary"
