@@ -101,6 +101,20 @@ fn add_exact_match_benches(
         });
     });
 
+    group.bench_function("simplearrayhash", |b| {
+        let records: Vec<_> = keys.iter().enumerate().map(|(i, k)| (k, i)).collect();
+        let map = simplearrayhash::HashMap::new(&records).unwrap();
+        b.iter(|| {
+            let mut dummy = 0;
+            for query in queries {
+                dummy += map.get(query).unwrap();
+            }
+            if dummy == 0 {
+                panic!();
+            }
+        });
+    });
+
     group.bench_function("yada", |b| {
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys
