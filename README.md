@@ -33,7 +33,7 @@ To use `crawdad`, depend on it in your Cargo manifest:
 # Cargo.toml
 
 [dependencies]
-crawdad = "0.1"
+crawdad = "0.2"
 ```
 
 ## Disclaimer
