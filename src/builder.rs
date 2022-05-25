@@ -7,6 +7,7 @@ use core::cmp::Ordering;
 
 use alloc::vec::Vec;
 
+// The default parameter for free blocks to be searched in `find_base`.
 const DEFAULT_NUM_FREE_BLOCKS: u32 = 16;
 
 #[derive(Default)]
@@ -419,7 +420,10 @@ impl Builder {
             // Here, self.head_idx != INVALID_IDX is ensured,
             // because INVALID_IDX is the maximum value in u32.
             debug_assert_ne!(self.head_idx, INVALID_IDX);
-            self.fix_node(self.head_idx);
+            let idx = self.head_idx;
+            self.fix_node(idx);
+            self.node_mut(idx).base = OFFSET_MASK;
+            self.node_mut(idx).check = OFFSET_MASK;
         }
     }
 
