@@ -77,7 +77,7 @@ impl Builder {
 
         make_prefix_free(&mut self.records)?;
 
-        self.block_len = get_block_len(self.mapper.alphabet_size());
+        self.block_len = self.mapper.alphabet_size().next_power_of_two().max(2);
         self.init_array();
         self.arrange_nodes(0, self.records.len(), 0, 0)?;
         self.finish();
@@ -497,10 +497,4 @@ fn pop_end_marker(x: &[char]) -> Vec<char> {
         Some((&END_MARKER, elems)) => elems.to_vec(),
         _ => x.to_vec(),
     }
-}
-
-const fn get_block_len(alphabet_size: u32) -> u32 {
-    let max_code = alphabet_size - 1;
-    let shift = 32 - max_code.leading_zeros();
-    1 << shift
 }
