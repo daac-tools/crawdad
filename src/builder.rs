@@ -7,6 +7,8 @@ use core::cmp::Ordering;
 
 use alloc::vec::Vec;
 
+const DEFAULT_NUM_FREE_BLOCKS: u32 = 16;
+
 #[derive(Default)]
 struct Record {
     key: Vec<char>,
@@ -19,7 +21,6 @@ struct Suffix {
     value: u32,
 }
 
-#[derive(Default)]
 pub struct Builder {
     records: Vec<Record>,
     mapper: CodeMapper,
@@ -28,6 +29,22 @@ pub struct Builder {
     labels: Vec<u32>,
     head_idx: u32,
     block_len: u32,
+    num_free_blocks: u32,
+}
+
+impl Default for Builder {
+    fn default() -> Self {
+        Self {
+            records: vec![],
+            mapper: CodeMapper::default(),
+            nodes: vec![],
+            suffixes: None,
+            labels: vec![],
+            head_idx: 0,
+            block_len: 0,
+            num_free_blocks: DEFAULT_NUM_FREE_BLOCKS,
+        }
+    }
 }
 
 impl Builder {
@@ -367,6 +384,11 @@ impl Builder {
             return Err(CrawdadError::scale("num_nodes", OFFSET_MASK));
         }
 
+        let num_blocks = old_len / self.block_len;
+        if self.num_free_blocks <= num_blocks {
+            self.close_block(num_blocks - self.num_free_blocks);
+        }
+
         for i in old_len..new_len {
             self.nodes.push(Node::default());
             self.set_next(i, i + 1);
@@ -387,6 +409,18 @@ impl Builder {
         }
 
         Ok(())
+    }
+
+    /// Note: Assumes all the previous blocks are closed.
+    fn close_block(&mut self, block_idx: u32) {
+        let beg_idx = block_idx * self.block_len;
+        let end_idx = beg_idx + self.block_len;
+        while self.head_idx < end_idx {
+            // Here, self.head_idx != INVALID_IDX is ensured,
+            // because INVALID_IDX is the maximum value in u32.
+            debug_assert_ne!(self.head_idx, INVALID_IDX);
+            self.fix_node(self.head_idx);
+        }
     }
 
     #[inline(always)]
