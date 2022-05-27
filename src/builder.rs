@@ -7,6 +7,9 @@ use core::cmp::Ordering;
 
 use alloc::vec::Vec;
 
+// The default parameter for free blocks to be searched in `find_base`.
+const DEFAULT_NUM_FREE_BLOCKS: u32 = 16;
+
 #[derive(Default)]
 struct Record {
     key: Vec<char>,
@@ -19,7 +22,6 @@ struct Suffix {
     value: u32,
 }
 
-#[derive(Default)]
 pub struct Builder {
     records: Vec<Record>,
     mapper: CodeMapper,
@@ -28,6 +30,22 @@ pub struct Builder {
     labels: Vec<u32>,
     head_idx: u32,
     block_len: u32,
+    num_free_blocks: u32,
+}
+
+impl Default for Builder {
+    fn default() -> Self {
+        Self {
+            records: vec![],
+            mapper: CodeMapper::default(),
+            nodes: vec![],
+            suffixes: None,
+            labels: vec![],
+            head_idx: 0,
+            block_len: 0,
+            num_free_blocks: DEFAULT_NUM_FREE_BLOCKS,
+        }
+    }
 }
 
 impl Builder {
@@ -77,7 +95,7 @@ impl Builder {
 
         make_prefix_free(&mut self.records)?;
 
-        self.block_len = get_block_len(self.mapper.alphabet_size());
+        self.block_len = self.mapper.alphabet_size().next_power_of_two().max(2);
         self.init_array();
         self.arrange_nodes(0, self.records.len(), 0, 0)?;
         self.finish();
@@ -367,6 +385,11 @@ impl Builder {
             return Err(CrawdadError::scale("num_nodes", OFFSET_MASK));
         }
 
+        let num_blocks = old_len / self.block_len;
+        if self.num_free_blocks <= num_blocks {
+            self.close_block(num_blocks - self.num_free_blocks);
+        }
+
         for i in old_len..new_len {
             self.nodes.push(Node::default());
             self.set_next(i, i + 1);
@@ -387,6 +410,21 @@ impl Builder {
         }
 
         Ok(())
+    }
+
+    /// Note: Assumes all the previous blocks are closed.
+    fn close_block(&mut self, block_idx: u32) {
+        let beg_idx = block_idx * self.block_len;
+        let end_idx = beg_idx + self.block_len;
+        while self.head_idx < end_idx {
+            // Here, self.head_idx != INVALID_IDX is ensured,
+            // because INVALID_IDX is the maximum value in u32.
+            debug_assert_ne!(self.head_idx, INVALID_IDX);
+            let idx = self.head_idx;
+            self.fix_node(idx);
+            self.node_mut(idx).base = OFFSET_MASK;
+            self.node_mut(idx).check = OFFSET_MASK;
+        }
     }
 
     #[inline(always)]
@@ -497,10 +535,4 @@ fn pop_end_marker(x: &[char]) -> Vec<char> {
         Some((&END_MARKER, elems)) => elems.to_vec(),
         _ => x.to_vec(),
     }
-}
-
-const fn get_block_len(alphabet_size: u32) -> u32 {
-    let max_code = alphabet_size - 1;
-    let shift = 32 - max_code.leading_zeros();
-    1 << shift
 }
