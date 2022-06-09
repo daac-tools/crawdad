@@ -230,6 +230,19 @@ impl Trie {
         }
     }
 
+    /// Atodekaku
+    pub fn common_prefix_search<'a>(
+        &'a self,
+        haystack: &'a [char],
+    ) -> CommonPrefixSearchIterNoBuffer {
+        CommonPrefixSearchIterNoBuffer {
+            haystack,
+            haystack_pos: 0,
+            trie: self,
+            node_idx: 0,
+        }
+    }
+
     /// Prepares a search haystack for common prefix search.
     ///
     /// # Arguments
@@ -403,6 +416,44 @@ impl Iterator for CommonPrefixSearchIter<'_, '_> {
                     range_chars: self.start_chars..end_chars,
                     range_bytes: self.start_bytes..end_bytes,
                 });
+            }
+        }
+        None
+    }
+}
+
+/// Atodekaku
+pub struct CommonPrefixSearchIterNoBuffer<'k, 't> {
+    haystack: &'k [char],
+    haystack_pos: usize,
+    trie: &'t Trie,
+    node_idx: u32,
+}
+
+impl Iterator for CommonPrefixSearchIterNoBuffer<'_, '_> {
+    type Item = (u32, usize); // value, length (in char)
+
+    #[inline(always)]
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.haystack_pos < self.haystack.len() {
+            let mc = self.trie.mapper.get(self.haystack[self.haystack_pos]);
+            if let Some(child_idx) = mc.and_then(|c| self.trie.get_child_idx(self.node_idx, c)) {
+                self.node_idx = child_idx;
+            } else {
+                self.haystack_pos = self.haystack.len();
+                return None;
+            }
+
+            self.haystack_pos += 1;
+
+            if self.trie.is_leaf(self.node_idx) {
+                let end_chars = self.haystack_pos;
+                self.haystack_pos = self.haystack.len();
+                return Some((self.trie.get_value(self.node_idx), end_chars));
+            } else if self.trie.has_leaf(self.node_idx) {
+                let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
+                let end_chars = self.haystack_pos;
+                return Some((self.trie.get_value(leaf_idx), end_chars));
             }
         }
         None
