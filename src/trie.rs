@@ -312,7 +312,7 @@ where
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(c) = self.haystack.next() {
+        for c in self.haystack.by_ref() {
             let mc = self.trie.mapper.get(c)?;
             self.node_idx = self.trie.get_child_idx(self.node_idx, mc)?;
             self.haystack_pos += 1;
