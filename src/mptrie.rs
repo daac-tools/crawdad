@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{utils, Node};
+use crate::Node;
 
 use crate::END_CODE;
 
@@ -14,9 +14,7 @@ use core::mem;
 pub struct MpTrie {
     pub(crate) mapper: CodeMapper,
     pub(crate) nodes: Vec<Node>,
-    pub(crate) tails: Vec<u8>,
-    pub(crate) code_size: u8,
-    pub(crate) value_size: u8,
+    pub(crate) tails: Vec<u16>,
 }
 
 impl MpTrie {
@@ -118,9 +116,9 @@ impl MpTrie {
             dest.extend_from_slice(&node.serialize());
         }
         dest.extend_from_slice(&u32::try_from(self.tails.len()).unwrap().to_le_bytes());
-        dest.extend_from_slice(&self.tails);
-        dest.extend_from_slice(&[self.code_size]);
-        dest.extend_from_slice(&[self.value_size]);
+        for &x in &self.tails {
+            dest.extend_from_slice(&x.to_le_bytes());
+        }
         dest
     }
 
@@ -164,21 +162,20 @@ impl MpTrie {
         let tails = {
             let len = u32::from_le_bytes(source[..4].try_into().unwrap()) as usize;
             source = &source[4..];
-            let tails = source[..len].to_vec();
-            source = &source[len..];
+            let mut tails = Vec::with_capacity(len);
+            for _ in 0..len {
+                tails.push(u16::from_le_bytes(source[..2].try_into().unwrap()));
+                source = &source[2..];
+            }
             tails
         };
-        let code_size = source[0];
-        let value_size = source[1];
         (
             Self {
                 mapper,
                 nodes,
                 tails,
-                code_size,
-                value_size,
             },
-            &source[2..],
+            &source,
         )
     }
 
@@ -333,7 +330,7 @@ impl MpTrie {
     pub fn heap_bytes(&self) -> usize {
         self.mapper.heap_bytes()
             + self.nodes.len() * mem::size_of::<Node>()
-            + self.tails.len() * mem::size_of::<u8>()
+            + self.tails.len() * mem::size_of::<u16>()
     }
 
     /// Returns the total amount of bytes to serialize the data structure.
@@ -341,9 +338,8 @@ impl MpTrie {
         self.mapper.io_bytes()
             + self.nodes.len() * Node::io_bytes()
             + mem::size_of::<u32>()
-            + self.tails.len() * mem::size_of::<u8>()
+            + self.tails.len() * mem::size_of::<u16>()
             + mem::size_of::<u32>()
-            + mem::size_of::<u8>() * 2
     }
 
     /// Returns the number of reserved elements.
@@ -404,7 +400,7 @@ struct TailIter<'a> {
 impl TailIter<'_> {
     #[inline(always)]
     fn value(&self) -> u32 {
-        utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.value_size)
+        u32::from(self.trie.tails[self.pos]) | (u32::from(self.trie.tails[self.pos + 1]) << 16)
     }
 }
 
@@ -414,10 +410,10 @@ impl Iterator for TailIter<'_> {
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         if self.len != 0 {
-            let c = utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.code_size);
-            self.pos += usize::try_from(self.trie.code_size).unwrap();
+            let code = self.trie.tails[self.pos];
+            self.pos += 1;
             self.len -= 1;
-            Some(c)
+            Some(u32::from(code))
         } else {
             None
         }
@@ -476,8 +472,6 @@ mod tests {
         assert_eq!(trie.mapper, other.mapper);
         assert_eq!(trie.nodes, other.nodes);
         assert_eq!(trie.tails, other.tails);
-        assert_eq!(trie.code_size, other.code_size);
-        assert_eq!(trie.value_size, other.value_size);
     }
 
     #[test]

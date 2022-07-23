@@ -90,7 +90,7 @@ impl Builder {
             }
         }
 
-        self.mapper = CodeMapper::new(&make_freqs(&self.records)?);
+        self.mapper = CodeMapper::new(&make_freqs(&self.records)?)?;
         assert_eq!(self.mapper.get(END_MARKER).unwrap(), END_CODE);
 
         make_prefix_free(&mut self.records)?;
@@ -123,14 +123,7 @@ impl Builder {
 
         let suffixes =
             suffixes.ok_or_else(|| CrawdadError::setup("minimal_prefix must be enabled."))?;
-
         let mut tails = vec![];
-
-        let max_code = mapper.alphabet_size() - 1;
-        let code_size = utils::pack_size(max_code);
-
-        let max_value = suffixes.iter().map(|s| s.value).max().unwrap();
-        let value_size = utils::pack_size(max_value);
 
         for node_idx in 0..nodes.len() {
             if nodes[node_idx].is_vacant() {
@@ -161,26 +154,28 @@ impl Builder {
                 return Err(CrawdadError::scale("length of tails", OFFSET_MASK));
             };
 
-            if suffix.key.len() > usize::from(u8::MAX) {
-                return Err(CrawdadError::scale("length of suffix", u32::from(u8::MAX)));
+            if suffix.key.len() > usize::from(u16::MAX) {
+                return Err(CrawdadError::scale("length of suffix", u32::from(u16::MAX)));
             }
 
             nodes[node_idx].base = tail_start | !OFFSET_MASK;
             tails.push(suffix.key.len().try_into().unwrap());
-            suffix
-                .key
-                .iter()
-                .map(|&c| mapper.get(c).unwrap())
-                .for_each(|c| utils::pack_u32(&mut tails, c, code_size));
-            utils::pack_u32(&mut tails, suffix.value, value_size);
+            tails.extend(
+                suffix
+                    .key
+                    .iter()
+                    .map(|&c| u16::try_from(mapper.get(c).unwrap()).unwrap()),
+            );
+            tails.extend_from_slice(&[
+                (suffix.value & 0xFFFF).try_into().unwrap(),
+                (suffix.value >> 16).try_into().unwrap(),
+            ]);
         }
 
         Ok(MpTrie {
             mapper,
             nodes,
             tails,
-            code_size,
-            value_size,
         })
     }
 
