@@ -313,15 +313,9 @@ where
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
         while let Some(c) = self.haystack.next() {
-            let mc = self.trie.mapper.get(c);
-            if let Some(child_idx) = mc.and_then(|c| self.trie.get_child_idx(self.node_idx, c)) {
-                self.node_idx = child_idx;
-            } else {
-                return None;
-            }
-
+            let mc = self.trie.mapper.get(c)?;
+            self.node_idx = self.trie.get_child_idx(self.node_idx, mc)?;
             self.haystack_pos += 1;
-
             if self.trie.is_leaf(self.node_idx) {
                 return Some((self.trie.get_value(self.node_idx), self.haystack_pos));
             } else if self.trie.has_leaf(self.node_idx) {
