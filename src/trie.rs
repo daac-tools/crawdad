@@ -192,7 +192,7 @@ impl Trie {
     /// Returns an iterator for common prefix search.
     ///
     /// The iterator reports all occurrences of keys starting from an input haystack, where
-    /// each occurrence consists of its associated value and ending positoin in characters.
+    /// an occurrence consists of its associated value and ending positoin in characters.
     ///
     /// # Examples
     ///
