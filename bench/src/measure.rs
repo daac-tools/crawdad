@@ -68,13 +68,14 @@ fn main() {
         if let Some(texts) = texts.as_ref() {
             // Warmup
             let mut dummy = 0;
-            let mut searcher = trie.common_prefix_searcher();
+            let mut haystack = vec![];
             let elapsed_sec = measure(TRIALS, || {
                 for text in texts {
-                    searcher.update_haystack(text.chars());
-                    for i in 0..searcher.len_chars() {
-                        for m in searcher.search(i) {
-                            dummy += m.end_bytes() + m.value() as usize;
+                    haystack.clear();
+                    text.chars().for_each(|c| haystack.push(c));
+                    for i in 0..haystack.len() {
+                        for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+                            dummy += j + v as usize;
                         }
                     }
                 }

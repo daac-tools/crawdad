@@ -38,23 +38,18 @@
 //! let keys = vec!["世界", "世界中", "国民"];
 //! let trie = Trie::from_keys(&keys).unwrap();
 //!
-//! let mut searcher = trie.common_prefix_searcher();
-//! searcher.update_haystack("国民が世界中にて".chars());
-//!
+//! let haystack: Vec<_> = "国民が世界中にて".chars().collect();
 //! let mut matches = vec![];
-//! for i in 0..searcher.len_chars() {
-//!     for m in searcher.search(i) {
-//!         matches.push((
-//!             m.value(),
-//!             m.start_chars()..m.end_chars(),
-//!             m.start_bytes()..m.end_bytes(),
-//!         ));
+//!
+//! for i in 0..haystack.len() {
+//!     for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+//!         matches.push((v, i..i + j));
 //!     }
 //! }
 //!
 //! assert_eq!(
 //!     matches,
-//!     vec![(2, 0..2, 0..6), (0, 3..5, 9..15), (1, 3..6, 9..18)]
+//!     vec![(2, 0..2), (0, 3..5), (1, 3..6)]
 //! );
 //! ```
 //!

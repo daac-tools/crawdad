@@ -2,7 +2,7 @@
 use crate::builder::Builder;
 use crate::errors::Result;
 use crate::mapper::CodeMapper;
-use crate::{MappedChar, Match, Node};
+use crate::Node;
 
 use crate::END_CODE;
 
@@ -204,51 +204,26 @@ impl Trie {
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = Trie::from_keys(&keys).unwrap();
     ///
-    /// let mut searcher = trie.common_prefix_searcher();
-    /// searcher.update_haystack("国民が世界中にて".chars());
-    ///
+    /// let haystack: Vec<_> = "国民が世界中にて".chars().collect();
     /// let mut matches = vec![];
-    /// for i in 0..searcher.len_chars() {
-    ///     for m in searcher.search(i) {
-    ///         matches.push((
-    ///             m.value(),
-    ///             m.start_chars()..m.end_chars(),
-    ///             m.start_bytes()..m.end_bytes(),
-    ///         ));
+    ///
+    /// for i in 0..haystack.len() {
+    ///     for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+    ///         matches.push((v, i..i + j));
     ///     }
     /// }
     ///
     /// assert_eq!(
     ///     matches,
-    ///     vec![(2, 0..2, 0..6), (0, 3..5, 9..15), (1, 3..6, 9..18)]
+    ///     vec![(2, 0..2), (0, 3..5), (1, 3..6)]
     /// );
     /// ```
-    pub const fn common_prefix_searcher(&self) -> CommonPrefixSearcher {
-        CommonPrefixSearcher {
+    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<I> {
+        CommonPrefixSearchIter {
+            haystack,
+            haystack_pos: 0,
             trie: self,
-            haystack: vec![],
-        }
-    }
-
-    /// Prepares a search haystack for common prefix search.
-    ///
-    /// # Arguments
-    ///
-    /// - `haystack`: Search haystack.
-    /// - `mapped`: Mapped haystack.
-    #[inline(always)]
-    fn map_haystack<I>(&self, haystack: I, mapped: &mut Vec<MappedChar>)
-    where
-        I: IntoIterator<Item = char>,
-    {
-        mapped.clear();
-        let mut end_bytes = 0;
-        for c in haystack {
-            end_bytes += c.len_utf8();
-            mapped.push(MappedChar {
-                c: self.mapper.get(c),
-                end_bytes,
-            });
+            node_idx: 0,
         }
     }
 
@@ -320,89 +295,35 @@ impl Trie {
     }
 }
 
-/// Common prefix searcher created by [`Trie::common_prefix_searcher`].
-pub struct CommonPrefixSearcher<'t> {
-    trie: &'t Trie,
-    haystack: Vec<MappedChar>,
-}
-
-impl CommonPrefixSearcher<'_> {
-    /// Sets a search haystack.
-    pub fn update_haystack<I>(&mut self, haystack: I)
-    where
-        I: IntoIterator<Item = char>,
-    {
-        self.trie.map_haystack(haystack, &mut self.haystack);
-    }
-
-    /// Gets the haystack length in characters.
-    pub fn len_chars(&self) -> usize {
-        self.haystack.len()
-    }
-
-    /// Creates an iterator to search for the haystack from the given position.
-    pub fn search(&self, start: usize) -> CommonPrefixSearchIter {
-        let start_chars = start;
-        let start_bytes = if start_chars == 0 {
-            0
-        } else {
-            self.haystack[start_chars - 1].end_bytes
-        };
-        CommonPrefixSearchIter {
-            haystack: &self.haystack,
-            haystack_pos: start_chars,
-            trie: self.trie,
-            node_idx: 0,
-            start_chars,
-            start_bytes,
-        }
-    }
-}
-
 /// Iterator for common prefix search.
-pub struct CommonPrefixSearchIter<'k, 't> {
-    haystack: &'k [MappedChar],
+pub struct CommonPrefixSearchIter<'t, I> {
+    haystack: I,
     haystack_pos: usize,
     trie: &'t Trie,
     node_idx: u32,
-    start_chars: usize,
-    start_bytes: usize,
 }
 
-impl Iterator for CommonPrefixSearchIter<'_, '_> {
-    type Item = Match;
+impl<I> Iterator for CommonPrefixSearchIter<'_, I>
+where
+    I: Iterator<Item = char>,
+{
+    type Item = (u32, usize);
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
-        while self.haystack_pos < self.haystack.len() {
-            let mc = self.haystack[self.haystack_pos];
-            if let Some(child_idx) = mc.c.and_then(|c| self.trie.get_child_idx(self.node_idx, c)) {
+        while let Some(c) = self.haystack.next() {
+            let mc = self.trie.mapper.get(c);
+            if let Some(child_idx) = mc.and_then(|c| self.trie.get_child_idx(self.node_idx, c)) {
                 self.node_idx = child_idx;
             } else {
-                self.haystack_pos = self.haystack.len();
                 return None;
             }
-
             self.haystack_pos += 1;
-
             if self.trie.is_leaf(self.node_idx) {
-                let end_chars = self.haystack_pos;
-                let end_bytes = self.haystack[end_chars - 1].end_bytes;
-                self.haystack_pos = self.haystack.len();
-                return Some(Match {
-                    value: self.trie.get_value(self.node_idx),
-                    range_chars: self.start_chars..end_chars,
-                    range_bytes: self.start_bytes..end_bytes,
-                });
+                return Some((self.trie.get_value(self.node_idx), self.haystack_pos));
             } else if self.trie.has_leaf(self.node_idx) {
                 let leaf_idx = self.trie.get_leaf_idx(self.node_idx);
-                let end_chars = self.haystack_pos;
-                let end_bytes = self.haystack[end_chars - 1].end_bytes;
-                return Some(Match {
-                    value: self.trie.get_value(leaf_idx),
-                    range_chars: self.start_chars..end_chars,
-                    range_bytes: self.start_bytes..end_bytes,
-                });
+                return Some((self.trie.get_value(leaf_idx), self.haystack_pos));
             }
         }
         None
@@ -436,24 +357,15 @@ mod tests {
         let keys = vec!["世界", "世界中", "世論調査", "統計調査"];
         let trie = Trie::from_keys(&keys).unwrap();
 
-        let mut searcher = trie.common_prefix_searcher();
-        searcher.update_haystack("世界中の統計世論調査".chars());
-
+        let haystack: Vec<_> = "世界中の統計世論調査".chars().collect();
         let mut matches = vec![];
-        for i in 0..searcher.len_chars() {
-            for m in searcher.search(i) {
-                matches.push((
-                    m.value(),
-                    m.start_chars()..m.end_chars(),
-                    m.start_bytes()..m.end_bytes(),
-                ));
+
+        for i in 0..haystack.len() {
+            for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+                matches.push((v, i..i + j));
             }
         }
-
-        assert_eq!(
-            matches,
-            vec![(0, 0..2, 0..6), (1, 0..3, 0..9), (2, 6..10, 18..30)]
-        );
+        assert_eq!(matches, vec![(0, 0..2), (1, 0..3), (2, 6..10)]);
     }
 
     #[test]
