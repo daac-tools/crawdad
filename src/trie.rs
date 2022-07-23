@@ -189,14 +189,15 @@ impl Trie {
         }
     }
 
-    /// Returns a common prefix searcher.
+    /// Returns an iterator for common prefix search.
     ///
-    /// The searcher finds all occurrences of keys starting from an input haystack, and
-    /// the occurrences are reported as a sequence of [`Match`](crate::Match).
+    /// The iterator reports all occurrences of keys starting from an input haystack, where
+    /// each occurrence consists of its associated value and ending positoin in characters.
     ///
     /// # Examples
     ///
-    /// You can find all occurrences of keys in a haystack as follows.
+    /// You can find all occurrences of keys in a haystack by performing common prefix searches
+    /// at all starting positions.
     ///
     /// ```
     /// use crawdad::Trie;

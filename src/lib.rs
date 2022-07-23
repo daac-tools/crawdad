@@ -30,7 +30,7 @@
 //! ## Finding all occurrences of keys in an input text
 //!
 //! To search for all occurrences of registered keys in an input text,
-//! use [`Trie::common_prefix_searcher()`] for all starting positions in the text.
+//! use [`Trie::common_prefix_search()`] for all starting positions in the text.
 //!
 //! ```
 //! use crawdad::Trie;
