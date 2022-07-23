@@ -8,7 +8,7 @@ use crate::END_CODE;
 
 use alloc::vec::Vec;
 
-use core::mem::size_of;
+use core::mem;
 
 /// A standard trie form that often provides the fastest queries.
 pub struct Trie {
@@ -276,12 +276,12 @@ impl Trie {
 
     /// Returns the total amount of heap used by this automaton in bytes.
     pub fn heap_bytes(&self) -> usize {
-        self.mapper.heap_bytes() + self.nodes.len() * size_of::<Node>()
+        self.mapper.heap_bytes() + self.nodes.len() * mem::size_of::<Node>()
     }
 
     /// Returns the total amount of bytes to serialize the data structure.
     pub fn io_bytes(&self) -> usize {
-        self.mapper.io_bytes() + self.nodes.len() * Node::io_bytes() + size_of::<u32>()
+        self.mapper.io_bytes() + self.nodes.len() * Node::io_bytes() + mem::size_of::<u32>()
     }
 
     /// Returns the number of reserved elements.

@@ -8,7 +8,7 @@ use crate::END_CODE;
 
 use alloc::vec::Vec;
 
-use core::mem::size_of;
+use core::mem;
 
 /// A minimal-prefix trie form that is memory-efficient for long strings.
 pub struct MpTrie {
@@ -331,18 +331,18 @@ impl MpTrie {
     /// Returns the total amount of heap used by this automaton in bytes.
     pub fn heap_bytes(&self) -> usize {
         self.mapper.heap_bytes()
-            + self.nodes.len() * size_of::<Node>()
-            + self.tails.len() * size_of::<u8>()
+            + self.nodes.len() * mem::size_of::<Node>()
+            + self.tails.len() * mem::size_of::<u8>()
     }
 
     /// Returns the total amount of bytes to serialize the data structure.
     pub fn io_bytes(&self) -> usize {
         self.mapper.io_bytes()
             + self.nodes.len() * Node::io_bytes()
-            + size_of::<u32>()
-            + self.tails.len() * size_of::<u8>()
-            + size_of::<u32>()
-            + size_of::<u8>() * 2
+            + mem::size_of::<u32>()
+            + self.tails.len() * mem::size_of::<u8>()
+            + mem::size_of::<u32>()
+            + mem::size_of::<u8>() * 2
     }
 
     /// Returns the number of reserved elements.
