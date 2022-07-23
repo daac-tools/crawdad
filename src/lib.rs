@@ -88,8 +88,6 @@ pub mod mptrie;
 pub mod trie;
 mod utils;
 
-use core::ops::Range;
-
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
 pub(crate) const INVALID_IDX: u32 = 0xffff_ffff;
 pub(crate) const MAX_VALUE: u32 = OFFSET_MASK;
@@ -100,53 +98,6 @@ pub const END_MARKER: char = '\u{0}';
 
 pub use mptrie::MpTrie;
 pub use trie::Trie;
-
-/// Result of common prefix search.
-#[derive(Default, Clone)]
-pub struct Match {
-    value: u32,
-    range_chars: Range<usize>,
-    range_bytes: Range<usize>,
-}
-
-impl Match {
-    /// Value associated with the matched key.
-    #[inline(always)]
-    pub const fn value(&self) -> u32 {
-        self.value
-    }
-
-    /// Starting position of the match in characters.
-    #[inline(always)]
-    pub const fn start_chars(&self) -> usize {
-        self.range_chars.start
-    }
-
-    /// Ending position of the match in characters.
-    #[inline(always)]
-    pub const fn end_chars(&self) -> usize {
-        self.range_chars.end
-    }
-
-    /// Starting position of the match in bytes if characters are encoded in UTF-8.
-    #[inline(always)]
-    pub const fn start_bytes(&self) -> usize {
-        self.range_bytes.start
-    }
-
-    /// Ending position of the match in bytes if characters are encoded in UTF-8.
-    #[inline(always)]
-    pub const fn end_bytes(&self) -> usize {
-        self.range_bytes.end
-    }
-}
-
-/// Handler for a mapped character.
-#[derive(Default, Clone, Copy)]
-struct MappedChar {
-    c: Option<u32>,
-    end_bytes: usize,
-}
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Node {

@@ -318,7 +318,9 @@ where
             } else {
                 return None;
             }
+
             self.haystack_pos += 1;
+
             if self.trie.is_leaf(self.node_idx) {
                 return Some((self.trie.get_value(self.node_idx), self.haystack_pos));
             } else if self.trie.has_leaf(self.node_idx) {
