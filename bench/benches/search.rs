@@ -146,12 +146,12 @@ fn add_exact_match_benches(
 fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts: &[String]) {
     group.bench_function("crawdad/trie", |b| {
         let trie = crawdad::Trie::from_keys(keys).unwrap();
-        let mut haystack = Vec::with_capacity(256);
+        let mut haystack = vec![];
         b.iter(|| {
             let mut dummy = 0;
             for text in texts {
                 haystack.clear();
-                text.chars().for_each(|c| haystack.push(c));
+                haystack.extend(text.chars());
                 for i in 0..haystack.len() {
                     for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
                         dummy += j + v as usize;
@@ -166,12 +166,12 @@ fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], 
 
     group.bench_function("crawdad/mptrie", |b| {
         let trie = crawdad::MpTrie::from_keys(keys).unwrap();
-        let mut haystack = Vec::with_capacity(256);
+        let mut haystack = vec![];
         b.iter(|| {
             let mut dummy = 0;
             for text in texts {
                 haystack.clear();
-                text.chars().for_each(|c| haystack.push(c));
+                haystack.extend(text.chars());
                 for i in 0..haystack.len() {
                     for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
                         dummy += j + v as usize;

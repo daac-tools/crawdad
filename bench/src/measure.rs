@@ -72,7 +72,7 @@ fn main() {
             let elapsed_sec = measure(TRIALS, || {
                 for text in texts {
                     haystack.clear();
-                    text.chars().for_each(|c| haystack.push(c));
+                    haystack.extend(text.chars());
                     for i in 0..haystack.len() {
                         for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
                             dummy += j + v as usize;
@@ -123,7 +123,7 @@ fn main() {
             let elapsed_sec = measure(TRIALS, || {
                 for text in texts {
                     haystack.clear();
-                    text.chars().for_each(|c| haystack.push(c));
+                    haystack.extend(text.chars());
                     for i in 0..haystack.len() {
                         for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
                             dummy += j + v as usize;
