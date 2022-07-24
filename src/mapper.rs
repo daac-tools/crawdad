@@ -4,7 +4,7 @@ use core::mem::size_of;
 
 use crate::errors::{CrawdadError, Result};
 
-pub const INVALID_CODE: u16 = u16::MAX;
+const INVALID_MAX_CODE: u16 = u16::MAX;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct CodeMapper {
@@ -22,12 +22,12 @@ impl CodeMapper {
             sorted.sort_unstable_by(|(c1, f1), (c2, f2)| f2.cmp(f1).then_with(|| c1.cmp(c2)));
             sorted
         };
-        if usize::from(INVALID_CODE) < sorted.len() {
+        if usize::from(INVALID_MAX_CODE) < sorted.len() {
             return Err(CrawdadError::input(
                 "# of character kinds must be no more than 65535.",
             ));
         }
-        let mut table = vec![INVALID_CODE; freqs.len()];
+        let mut table = vec![INVALID_MAX_CODE; freqs.len()];
         for (i, &(c, _)) in sorted.iter().enumerate() {
             table[c] = i.try_into().unwrap();
         }
@@ -47,7 +47,7 @@ impl CodeMapper {
         self.table
             .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
-            .filter(|&code| code != INVALID_CODE)
+            .filter(|&code| code != INVALID_MAX_CODE)
             .map(u32::from)
     }
 
