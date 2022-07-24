@@ -48,7 +48,7 @@ impl CodeMapper {
             .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
             .filter(|&code| code != INVALID_CODE)
-            .map(|code| u32::from(code))
+            .map(u32::from)
     }
 
     #[inline]

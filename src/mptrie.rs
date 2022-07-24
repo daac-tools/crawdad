@@ -175,7 +175,7 @@ impl MpTrie {
                 nodes,
                 tails,
             },
-            &source,
+            source,
         )
     }
 
