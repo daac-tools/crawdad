@@ -246,11 +246,11 @@ impl MpTrie {
     /// let keys = vec!["世界", "世界中", "国民"];
     /// let trie = MpTrie::from_keys(&keys).unwrap();
     ///
-    /// let haystack: Vec<_> = "国民が世界中にて".chars().collect();
+    /// let haystack: Vec<char> = "国民が世界中にて".chars().collect();
     /// let mut matches = vec![];
     ///
     /// for i in 0..haystack.len() {
-    ///     for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+    ///     for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
     ///         matches.push((v, i..i + j));
     ///     }
     /// }
@@ -451,7 +451,7 @@ mod tests {
         let mut matches = vec![];
 
         for i in 0..haystack.len() {
-            for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+            for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
                 matches.push((v, i..i + j));
             }
         }
