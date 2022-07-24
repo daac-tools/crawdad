@@ -74,7 +74,7 @@ fn main() {
                     haystack.clear();
                     haystack.extend(text.chars());
                     for i in 0..haystack.len() {
-                        for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+                        for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
                             dummy += j + v as usize;
                         }
                     }
@@ -125,7 +125,7 @@ fn main() {
                     haystack.clear();
                     haystack.extend(text.chars());
                     for i in 0..haystack.len() {
-                        for (v, j) in trie.common_prefix_search(haystack[i..].iter().cloned()) {
+                        for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
                             dummy += j + v as usize;
                         }
                     }
