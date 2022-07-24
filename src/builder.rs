@@ -108,13 +108,13 @@ impl Builder {
         if self.suffixes.is_some() {
             Err(CrawdadError::setup("minimal_prefix must be disabled."))
         } else {
-            let Builder { nodes, mapper, .. } = self;
+            let Self { nodes, mapper, .. } = self;
             Ok(Trie { nodes, mapper })
         }
     }
 
     pub fn release_mptrie(self) -> Result<MpTrie> {
-        let Builder {
+        let Self {
             mapper,
             mut nodes,
             suffixes,

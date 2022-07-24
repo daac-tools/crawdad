@@ -146,14 +146,15 @@ fn add_exact_match_benches(
 fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], texts: &[String]) {
     group.bench_function("crawdad/trie", |b| {
         let trie = crawdad::Trie::from_keys(keys).unwrap();
-        let mut searcher = trie.common_prefix_searcher();
+        let mut haystack = vec![];
         b.iter(|| {
             let mut dummy = 0;
             for text in texts {
-                searcher.update_haystack(text.chars());
-                for i in 0..searcher.len_chars() {
-                    for m in searcher.search(i) {
-                        dummy += m.end_bytes() + m.value() as usize;
+                haystack.clear();
+                haystack.extend(text.chars());
+                for i in 0..haystack.len() {
+                    for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
+                        dummy += j + v as usize;
                     }
                 }
             }
@@ -165,14 +166,15 @@ fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], 
 
     group.bench_function("crawdad/mptrie", |b| {
         let trie = crawdad::MpTrie::from_keys(keys).unwrap();
-        let mut searcher = trie.common_prefix_searcher();
+        let mut haystack = vec![];
         b.iter(|| {
             let mut dummy = 0;
             for text in texts {
-                searcher.update_haystack(text.chars());
-                for i in 0..searcher.len_chars() {
-                    for m in searcher.search(i) {
-                        dummy += m.end_bytes() + m.value() as usize;
+                haystack.clear();
+                haystack.extend(text.chars());
+                for i in 0..haystack.len() {
+                    for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
+                        dummy += j + v as usize;
                     }
                 }
             }

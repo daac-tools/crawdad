@@ -30,7 +30,7 @@
 //! ## Finding all occurrences of keys in an input text
 //!
 //! To search for all occurrences of registered keys in an input text,
-//! use [`Trie::common_prefix_searcher()`] for all starting positions in the text.
+//! use [`Trie::common_prefix_search()`] for all starting positions in the text.
 //!
 //! ```
 //! use crawdad::Trie;
@@ -38,23 +38,18 @@
 //! let keys = vec!["世界", "世界中", "国民"];
 //! let trie = Trie::from_keys(&keys).unwrap();
 //!
-//! let mut searcher = trie.common_prefix_searcher();
-//! searcher.update_haystack("国民が世界中にて".chars());
-//!
+//! let haystack: Vec<char> = "国民が世界中にて".chars().collect();
 //! let mut matches = vec![];
-//! for i in 0..searcher.len_chars() {
-//!     for m in searcher.search(i) {
-//!         matches.push((
-//!             m.value(),
-//!             m.start_chars()..m.end_chars(),
-//!             m.start_bytes()..m.end_bytes(),
-//!         ));
+//!
+//! for i in 0..haystack.len() {
+//!     for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
+//!         matches.push((v, i..i + j));
 //!     }
 //! }
 //!
 //! assert_eq!(
 //!     matches,
-//!     vec![(2, 0..2, 0..6), (0, 3..5, 9..15), (1, 3..6, 9..18)]
+//!     vec![(2, 0..2), (0, 3..5), (1, 3..6)]
 //! );
 //! ```
 //!
@@ -93,8 +88,6 @@ pub mod mptrie;
 pub mod trie;
 mod utils;
 
-use core::ops::Range;
-
 pub(crate) const OFFSET_MASK: u32 = 0x7fff_ffff;
 pub(crate) const INVALID_IDX: u32 = 0xffff_ffff;
 pub(crate) const MAX_VALUE: u32 = OFFSET_MASK;
@@ -105,53 +98,6 @@ pub const END_MARKER: char = '\u{0}';
 
 pub use mptrie::MpTrie;
 pub use trie::Trie;
-
-/// Result of common prefix search.
-#[derive(Default, Clone)]
-pub struct Match {
-    value: u32,
-    range_chars: Range<usize>,
-    range_bytes: Range<usize>,
-}
-
-impl Match {
-    /// Value associated with the matched key.
-    #[inline(always)]
-    pub const fn value(&self) -> u32 {
-        self.value
-    }
-
-    /// Starting position of the match in characters.
-    #[inline(always)]
-    pub const fn start_chars(&self) -> usize {
-        self.range_chars.start
-    }
-
-    /// Ending position of the match in characters.
-    #[inline(always)]
-    pub const fn end_chars(&self) -> usize {
-        self.range_chars.end
-    }
-
-    /// Starting position of the match in bytes if characters are encoded in UTF-8.
-    #[inline(always)]
-    pub const fn start_bytes(&self) -> usize {
-        self.range_bytes.start
-    }
-
-    /// Ending position of the match in bytes if characters are encoded in UTF-8.
-    #[inline(always)]
-    pub const fn end_bytes(&self) -> usize {
-        self.range_bytes.end
-    }
-}
-
-/// Handler for a mapped character.
-#[derive(Default, Clone, Copy)]
-struct MappedChar {
-    c: Option<u32>,
-    end_bytes: usize,
-}
 
 #[derive(Default, Clone, Copy, Debug, PartialEq, Eq)]
 struct Node {
