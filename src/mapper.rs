@@ -8,7 +8,7 @@ const INVALID_MAX_CODE: u16 = u16::MAX;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct CodeMapper {
-    table: Vec<u16>,
+    table: Vec<u32>,
     alphabet_size: u32,
 }
 
@@ -27,7 +27,7 @@ impl CodeMapper {
                 "# of character kinds must be no more than 65535.",
             ));
         }
-        let mut table = vec![INVALID_MAX_CODE; freqs.len()];
+        let mut table = vec![INVALID_MAX_CODE as u32; freqs.len()];
         for (i, &(c, _)) in sorted.iter().enumerate() {
             table[c] = i.try_into().unwrap();
         }
@@ -47,8 +47,7 @@ impl CodeMapper {
         self.table
             .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
-            .filter(|&code| code != INVALID_MAX_CODE)
-            .map(u32::from)
+            .filter(|&code| code != u32::from(INVALID_MAX_CODE))
     }
 
     #[inline]
@@ -75,8 +74,8 @@ impl CodeMapper {
             source = &source[4..];
             let mut table = Vec::with_capacity(len);
             for _ in 0..len {
-                table.push(u16::from_le_bytes(source[..2].try_into().unwrap()));
-                source = &source[2..];
+                table.push(u32::from_le_bytes(source[..4].try_into().unwrap()));
+                source = &source[4..];
             }
             table
         };
