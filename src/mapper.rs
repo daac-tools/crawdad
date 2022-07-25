@@ -4,7 +4,7 @@ use core::mem::size_of;
 
 use crate::errors::{CrawdadError, Result};
 
-const INVALID_MAX_CODE: u16 = u16::MAX;
+const INVALID_MAX_CODE: u32 = u32::MAX;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct CodeMapper {
@@ -22,7 +22,7 @@ impl CodeMapper {
             sorted.sort_unstable_by(|(c1, f1), (c2, f2)| f2.cmp(f1).then_with(|| c1.cmp(c2)));
             sorted
         };
-        if usize::from(INVALID_MAX_CODE) < sorted.len() {
+        if (INVALID_MAX_CODE as usize) < sorted.len() {
             return Err(CrawdadError::input(
                 "# of character kinds must be no more than 65535.",
             ));
@@ -47,17 +47,17 @@ impl CodeMapper {
         self.table
             .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
-            .filter(|&code| code != u32::from(INVALID_MAX_CODE))
+            .filter(|&code| code != INVALID_MAX_CODE)
     }
 
     #[inline]
     pub fn heap_bytes(&self) -> usize {
-        self.table.len() * size_of::<u16>()
+        self.table.len() * size_of::<u32>()
     }
 
     #[inline]
     pub fn io_bytes(&self) -> usize {
-        self.table.len() * size_of::<u16>() + size_of::<u32>() * 2
+        self.table.len() * size_of::<u32>() + size_of::<u32>() * 2
     }
 
     pub fn serialize_into_vec(&self, dest: &mut Vec<u8>) {
