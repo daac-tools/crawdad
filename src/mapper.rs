@@ -2,11 +2,11 @@ use alloc::vec::Vec;
 
 use core::mem::size_of;
 
-pub const INVALID_CODE: u32 = u32::MAX;
+pub const INVALID_CODE: u16 = u16::MAX;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct CodeMapper {
-    table: Vec<u32>,
+    table: Vec<u16>,
     alphabet_size: u32,
 }
 
@@ -42,16 +42,17 @@ impl CodeMapper {
             .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
             .filter(|&code| code != INVALID_CODE)
+            .map(u32::from)
     }
 
     #[inline]
     pub fn heap_bytes(&self) -> usize {
-        self.table.len() * size_of::<u32>()
+        self.table.len() * size_of::<u16>()
     }
 
     #[inline]
     pub fn io_bytes(&self) -> usize {
-        self.table.len() * size_of::<u32>() + size_of::<u32>() * 2
+        self.table.len() * size_of::<u16>() + size_of::<u32>() * 2
     }
 
     pub fn serialize_into_vec(&self, dest: &mut Vec<u8>) {
@@ -68,8 +69,8 @@ impl CodeMapper {
             source = &source[4..];
             let mut table = Vec::with_capacity(len);
             for _ in 0..len {
-                table.push(u32::from_le_bytes(source[..4].try_into().unwrap()));
-                source = &source[4..];
+                table.push(u16::from_le_bytes(source[..2].try_into().unwrap()));
+                source = &source[2..];
             }
             table
         };
