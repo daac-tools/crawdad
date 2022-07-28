@@ -25,22 +25,6 @@ Crawdad contains the two trie implementations:
 - `crawdad::Trie` is a standard trie form that often provides the fastest queries.
 - `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings. 
 
-## Installation
-
-To use `crawdad`, depend on it in your Cargo manifest:
-
-```toml
-# Cargo.toml
-
-[dependencies]
-crawdad = "0.2"
-```
-
-## Disclaimer
-
-This software is developed by LegalForce, Inc.,
-but not an officially supported LegalForce product.
-
 ## License
 
 Licensed under either of
