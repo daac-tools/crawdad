@@ -10,7 +10,7 @@ Crawdad is a library of natural language dictionaries using character-wise doubl
 The implementation is optimized for strings of multibyte-characters,
 and you can enjoy fast text processing on strings such as Japanese or Chinese.
 
-For example, on a large Japanese dictionary of IPADIC+Neologd, Crawdad has better time-space tradeoffs than other Rust libraries.
+For example, on a large Japanese dictionary of IPADIC+Neologd, Crawdad has a better time-space tradeoff than other Rust libraries.
 
 ![](./figures/neologd.svg)
 
