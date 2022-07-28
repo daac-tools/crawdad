@@ -190,6 +190,31 @@ fn main() {
     }
 
     {
+        println!("[hashbrown/HashMap]");
+        let start = Instant::now();
+        let mut map = hashbrown::HashMap::new();
+        for (i, key) in keys.iter().enumerate() {
+            map.insert(key, i as u32);
+        }
+        let duration = start.elapsed();
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        {
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for query in &queries {
+                    dummy += map.get(query).unwrap();
+                }
+            });
+            println!(
+                "exact_match: {:.3} [ns/query]",
+                to_ns(elapsed_sec) / queries.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+    }
+
+    {
         println!("[yada]");
         let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(

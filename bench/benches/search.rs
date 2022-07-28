@@ -101,6 +101,22 @@ fn add_exact_match_benches(
         });
     });
 
+    group.bench_function("hashbrown/HashMap", |b| {
+        let mut map = hashbrown::HashMap::new();
+        for (i, key) in keys.iter().enumerate() {
+            map.insert(key, i as u32);
+        }
+        b.iter(|| {
+            let mut dummy = 0;
+            for query in queries {
+                dummy += map.get(query).unwrap();
+            }
+            if dummy == 0 {
+                panic!();
+            }
+        });
+    });
+
     group.bench_function("yada", |b| {
         let data = yada::builder::DoubleArrayBuilder::build(
             &keys
