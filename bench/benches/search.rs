@@ -236,7 +236,7 @@ fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], 
     });
 
     group.bench_function("daachorse/bytewise", |b| {
-        let pma = daachorse::DoubleArrayAhoCorasick::new(keys).unwrap();
+        let pma = daachorse::DoubleArrayAhoCorasick::<u32>::new(keys).unwrap();
         b.iter(|| {
             let mut dummy = 0;
             for text in texts {
@@ -251,7 +251,7 @@ fn add_enumerate_benches(group: &mut BenchmarkGroup<WallTime>, keys: &[String], 
     });
 
     group.bench_function("daachorse/charwise", |b| {
-        let pma = daachorse::charwise::CharwiseDoubleArrayAhoCorasick::new(keys).unwrap();
+        let pma = daachorse::CharwiseDoubleArrayAhoCorasick::<u32>::new(keys).unwrap();
         b.iter(|| {
             let mut dummy = 0;
             for text in texts {

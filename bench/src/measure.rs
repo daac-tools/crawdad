@@ -292,7 +292,7 @@ fn main() {
     {
         println!("[daachorse/bytewise]");
         let start = Instant::now();
-        let pma = daachorse::DoubleArrayAhoCorasick::new(&keys).unwrap();
+        let pma = daachorse::DoubleArrayAhoCorasick::<u32>::new(&keys).unwrap();
         let duration = start.elapsed();
         print_heap_bytes(pma.heap_bytes());
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
@@ -318,7 +318,7 @@ fn main() {
     {
         println!("[daachorse/charwise]");
         let start = Instant::now();
-        let pma = daachorse::charwise::CharwiseDoubleArrayAhoCorasick::new(&keys).unwrap();
+        let pma = daachorse::CharwiseDoubleArrayAhoCorasick::<u32>::new(&keys).unwrap();
         let duration = start.elapsed();
         print_heap_bytes(pma.heap_bytes());
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
