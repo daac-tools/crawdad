@@ -34,8 +34,7 @@ fn main() {
         println!("texts_filename: {}", &texts_filename);
         load_file(&texts_filename)
     });
-
-    println!("#keys: {}", keys.len());
+    keys_stat(&keys);
 
     {
         println!("[crawdad/trie]");
@@ -439,4 +438,24 @@ fn to_us(sec: f64) -> f64 {
 #[allow(dead_code)]
 fn to_ns(sec: f64) -> f64 {
     sec * 1_000_000_000.
+}
+
+fn keys_stat(keys: &[String]) {
+    let totlen_byte = keys.iter().fold(0, |acc, k| acc + k.bytes().len());
+    let totlen_char = keys.iter().fold(0, |acc, k| acc + k.chars().count());
+    let filesize = totlen_byte + keys.len(); // with '\n'
+    println!(
+        "filesize: {} bytes, {:.3} MiB",
+        filesize,
+        filesize as f64 / (1024.0 * 1024.0)
+    );
+    println!("#keys: {}", keys.len());
+    println!(
+        "#bytes/key: {:.3}",
+        (totlen_byte as f64) / (keys.len() as f64)
+    );
+    println!(
+        "#chars/key: {:.3}",
+        (totlen_char as f64) / (keys.len() as f64)
+    );
 }
