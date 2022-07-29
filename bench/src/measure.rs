@@ -34,8 +34,7 @@ fn main() {
         println!("texts_filename: {}", &texts_filename);
         load_file(&texts_filename)
     });
-
-    println!("#keys: {}", keys.len());
+    keys_stat(&keys);
 
     {
         println!("[crawdad/trie]");
@@ -190,6 +189,31 @@ fn main() {
     }
 
     {
+        println!("[hashbrown/HashMap]");
+        let start = Instant::now();
+        let mut map = hashbrown::HashMap::new();
+        for (i, key) in keys.iter().enumerate() {
+            map.insert(key, i as u32);
+        }
+        let duration = start.elapsed();
+        println!("construction: {:.3} [sec]", duration.as_secs_f64());
+
+        {
+            let mut dummy = 0;
+            let elapsed_sec = measure(TRIALS, || {
+                for query in &queries {
+                    dummy += map.get(query).unwrap();
+                }
+            });
+            println!(
+                "exact_match: {:.3} [ns/query]",
+                to_ns(elapsed_sec) / queries.len() as f64
+            );
+            println!("dummy: {}", dummy);
+        }
+    }
+
+    {
         println!("[yada]");
         let start = Instant::now();
         let data = yada::builder::DoubleArrayBuilder::build(
@@ -292,7 +316,7 @@ fn main() {
     {
         println!("[daachorse/bytewise]");
         let start = Instant::now();
-        let pma = daachorse::DoubleArrayAhoCorasick::new(&keys).unwrap();
+        let pma = daachorse::DoubleArrayAhoCorasick::<u32>::new(&keys).unwrap();
         let duration = start.elapsed();
         print_heap_bytes(pma.heap_bytes());
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
@@ -318,7 +342,7 @@ fn main() {
     {
         println!("[daachorse/charwise]");
         let start = Instant::now();
-        let pma = daachorse::charwise::CharwiseDoubleArrayAhoCorasick::new(&keys).unwrap();
+        let pma = daachorse::CharwiseDoubleArrayAhoCorasick::<u32>::new(&keys).unwrap();
         let duration = start.elapsed();
         print_heap_bytes(pma.heap_bytes());
         println!("construction: {:.3} [sec]", duration.as_secs_f64());
@@ -414,4 +438,24 @@ fn to_us(sec: f64) -> f64 {
 #[allow(dead_code)]
 fn to_ns(sec: f64) -> f64 {
     sec * 1_000_000_000.
+}
+
+fn keys_stat(keys: &[String]) {
+    let totlen_byte = keys.iter().fold(0, |acc, k| acc + k.bytes().len());
+    let totlen_char = keys.iter().fold(0, |acc, k| acc + k.chars().count());
+    let filesize = totlen_byte + keys.len(); // with '\n'
+    println!(
+        "filesize: {} bytes, {:.3} MiB",
+        filesize,
+        filesize as f64 / (1024.0 * 1024.0)
+    );
+    println!("#keys: {}", keys.len());
+    println!(
+        "#bytes/key: {:.3}",
+        (totlen_byte as f64) / (keys.len() as f64)
+    );
+    println!(
+        "#chars/key: {:.3}",
+        (totlen_char as f64) / (keys.len() as f64)
+    );
 }
