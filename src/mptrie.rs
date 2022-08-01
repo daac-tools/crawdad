@@ -352,6 +352,10 @@ impl MpTrie {
     }
 
     /// Returns the number of vacant elements.
+    ///
+    /// # Note
+    ///
+    /// It takes `O(num_elems)` time.
     pub fn num_vacants(&self) -> usize {
         self.nodes.iter().filter(|nd| nd.is_vacant()).count()
     }
