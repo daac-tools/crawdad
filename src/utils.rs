@@ -30,6 +30,20 @@ pub fn unpack_u32(slice: &[u8], nbytes: u8) -> u32 {
     u32::from_le_bytes(n_array)
 }
 
+pub trait FromU32 {
+    fn from_u32(src: u32) -> Self;
+}
+
+#[cfg(any(target_pointer_width = "32", target_pointer_width = "64"))]
+impl FromU32 for usize {
+    #[inline(always)]
+    fn from_u32(src: u32) -> Self {
+        // Since the pointer width is guaranteed to be 32 or 64,
+        // the following process always succeeds.
+        unsafe { Self::try_from(src).unwrap_unchecked() }
+    }
+}
+
 /// Returns `(lcp, ord)` such that
 ///  - lcp: Length of longest commom prefix of `a` and `b`.
 ///  - ord: `Ordering` between `a` and `b`.

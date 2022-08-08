@@ -2,12 +2,15 @@ use alloc::vec::Vec;
 
 use core::mem::size_of;
 
+use crate::utils::FromU32;
+
 pub const INVALID_CODE: u32 = u32::MAX;
 
 #[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct CodeMapper {
     table: Vec<u32>,
     alphabet_size: u32,
+    universe_size: u32,
 }
 
 impl CodeMapper {
@@ -21,13 +24,33 @@ impl CodeMapper {
             sorted
         };
 
-        let mut table = vec![INVALID_CODE; freqs.len()];
-        for (i, &(c, _)) in sorted.iter().enumerate() {
-            table[c] = i.try_into().unwrap();
-        }
+        let alphabet_size = sorted.len().try_into().unwrap();
+        let universe_size = freqs.len().try_into().unwrap();
+
+        #[cfg(feature = "record-iter")]
+        let table = {
+            let mut table =
+                vec![INVALID_CODE; usize::from_u32(universe_size) + usize::from_u32(alphabet_size)];
+            for (i, &(c, _)) in sorted.iter().enumerate() {
+                table[c] = i.try_into().unwrap();
+                table[usize::from_u32(universe_size) + i] = c.try_into().unwrap();
+            }
+            table
+        };
+
+        #[cfg(not(feature = "record-iter"))]
+        let table = {
+            let mut table = vec![INVALID_CODE; usize::from_u32(universe_size)];
+            for (i, &(c, _)) in sorted.iter().enumerate() {
+                table[c] = i.try_into().unwrap();
+            }
+            table
+        };
+
         Self {
             table,
-            alphabet_size: sorted.len().try_into().unwrap(),
+            alphabet_size,
+            universe_size,
         }
     }
 
@@ -36,12 +59,25 @@ impl CodeMapper {
         self.alphabet_size
     }
 
+    #[allow(dead_code)]
+    #[inline]
+    pub const fn universe_size(&self) -> u32 {
+        self.universe_size
+    }
+
     #[inline(always)]
     pub fn get(&self, c: char) -> Option<u32> {
         self.table
             .get(usize::try_from(u32::from(c)).unwrap())
             .copied()
             .filter(|&code| code != INVALID_CODE)
+    }
+
+    #[cfg(feature = "record-iter")]
+    #[inline(always)]
+    pub fn get_inv(&self, mc: u32) -> char {
+        debug_assert!(mc < self.alphabet_size());
+        char::from_u32(self.table[usize::from_u32(self.universe_size() + mc)]).unwrap()
     }
 
     #[inline]
@@ -60,6 +96,7 @@ impl CodeMapper {
             dest.extend_from_slice(&x.to_le_bytes());
         }
         dest.extend_from_slice(&self.alphabet_size.to_le_bytes());
+        dest.extend_from_slice(&self.universe_size.to_le_bytes());
     }
 
     pub fn deserialize_from_slice(mut source: &[u8]) -> (Self, &[u8]) {
@@ -75,10 +112,13 @@ impl CodeMapper {
         };
         let alphabet_size = u32::from_le_bytes(source[..4].try_into().unwrap());
         source = &source[4..];
+        let universe_size = u32::from_le_bytes(source[..4].try_into().unwrap());
+        source = &source[4..];
         (
             Self {
                 table,
                 alphabet_size,
+                universe_size,
             },
             source,
         )

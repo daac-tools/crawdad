@@ -17,9 +17,10 @@ exclude = [".*"]
 [dependencies]
 
 [features]
-default = ["alloc"]
+default = ["alloc", "record-iter"]
 
 alloc = []
+record-iter = []
 
 [workspace]
 members = [
