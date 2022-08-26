@@ -42,6 +42,10 @@ at your option.
 
 For softwares under `bench/data`, follow the license terms of each software.
 
+## Acknowledgment
+
+The initial version of this software was developed by LegalForce, Inc., but not an officially supported LegalForce product.
+
 ## Contribution
 
 Unless you explicitly state otherwise, any contribution intentionally submitted
