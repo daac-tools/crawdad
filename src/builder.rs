@@ -84,6 +84,8 @@ impl Builder {
             })
             .collect();
 
+        self.records.sort_unstable_by(|a, b| a.key.cmp(&b.key));
+
         for &Record { key: _, value } in &self.records {
             if MAX_VALUE < value {
                 return Err(CrawdadError::scale("input value", MAX_VALUE));
@@ -522,9 +524,7 @@ fn make_prefix_free(records: &mut [Record]) -> Result<()> {
                     "records must not contain duplicated keys.",
                 ));
             }
-            Ordering::Greater => {
-                return Err(CrawdadError::input("records must be sorted."));
-            }
+            _ => unreachable!(),
         }
     }
     Ok(())

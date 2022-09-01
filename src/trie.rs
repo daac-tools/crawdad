@@ -33,7 +33,6 @@ impl Trie {
     /// - `keys` is empty,
     /// - `keys` contains empty strings,
     /// - `keys` contains duplicate keys,
-    /// - `keys` is not sorted,
     /// - the scale of `keys` exceeds the expected one, or
     /// - the scale of the resulting trie exceeds the expected one.
     ///
@@ -68,7 +67,6 @@ impl Trie {
     /// - `records` is empty,
     /// - `records` contains empty strings,
     /// - `records` contains duplicate keys,
-    /// - keys in `records` are not sorted,
     /// - the scale of `keys` exceeds the expected one, or
     /// - the scale of the resulting trie exceeds the expected one.
     ///
@@ -401,8 +399,8 @@ mod tests {
 
     #[test]
     fn test_unsorted_keys() {
-        assert!(Trie::from_keys(["BB", "AA"]).is_err());
-        assert!(Trie::from_keys(["AAA", "AA"]).is_err());
+        assert!(Trie::from_keys(["BB", "AA"]).is_ok());
+        assert!(Trie::from_keys(["AAA", "AA"]).is_ok());
     }
 
     #[test]
