@@ -256,7 +256,6 @@ impl Builder {
         for i2 in spos + 1..epos {
             let c2 = self.records[i2].key[depth];
             if c1 != c2 {
-                debug_assert!(c1 < c2);
                 let child_idx = base ^ self.mapper.get(c1).unwrap();
                 self.arrange_nodes(i1, i2, depth + 1, child_idx)?;
                 i1 = i2;
@@ -302,7 +301,6 @@ impl Builder {
         for i in spos + 1..epos {
             let c2 = self.records[i].key[depth];
             if c1 != c2 {
-                debug_assert!(c1 < c2);
                 self.labels.push(self.mapper.get(c1).unwrap());
                 c1 = c2;
             }
@@ -477,7 +475,8 @@ impl Builder {
 }
 
 fn make_freqs(records: &[Record]) -> Result<Vec<u32>> {
-    let mut freqs = vec![];
+    let end_marker = usize::try_from(u32::from(END_MARKER)).unwrap();
+    let mut freqs = vec![0; end_marker + 1];
     for rec in records {
         for &c in &rec.key {
             let c = usize::try_from(u32::from(c)).unwrap();
@@ -487,13 +486,10 @@ fn make_freqs(records: &[Record]) -> Result<Vec<u32>> {
             freqs[c] += 1;
         }
     }
-    let end_marker = usize::try_from(u32::from(END_MARKER)).unwrap();
     if let Some(&freq) = freqs.get(end_marker) {
         if freq != 0 {
             return Err(CrawdadError::input("END_MARKER must not be contained."));
         }
-    } else {
-        return Err(CrawdadError::input("records must contain any character."));
     }
     freqs[end_marker] = u32::MAX;
     Ok(freqs)

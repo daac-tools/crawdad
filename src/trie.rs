@@ -409,4 +409,20 @@ mod tests {
     fn test_duplicate_keys() {
         assert!(Trie::from_keys(["AA", "AA"]).is_err());
     }
+
+    #[test]
+    fn test_common_prefix_search_null() {
+        let keys = vec!["世界\0", "世界中", "世間"];
+        let trie = Trie::from_keys(&keys).unwrap();
+
+        let haystack: Vec<_> = "世界\0中の人\0世間".chars().collect();
+        let mut matches = vec![];
+
+        for i in 0..haystack.len() {
+            for (v, j) in trie.common_prefix_search(haystack[i..].iter().copied()) {
+                matches.push((v, i..i + j));
+            }
+        }
+        assert_eq!(matches, vec![(0, 0..3), (2, 7..9)]);
+    }
 }
