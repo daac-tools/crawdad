@@ -524,7 +524,7 @@ fn make_prefix_free(records: &mut [Record]) -> Result<()> {
                     "records must not contain duplicated keys.",
                 ));
             }
-            _ => unreachable!()
+            _ => unreachable!(),
         }
     }
     Ok(())
