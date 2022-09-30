@@ -20,8 +20,3 @@ exclude = [".*"]
 default = ["alloc"]
 
 alloc = []
-
-[workspace]
-members = [
-    "bench",
-]
