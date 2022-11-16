@@ -23,6 +23,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let keys: Vec<_> = BufReader::new(File::open(keys_path)?)
         .lines()
         .map(|line| line.unwrap())
+        .filter(|line| !line.is_empty())
         .collect();
 
     {
