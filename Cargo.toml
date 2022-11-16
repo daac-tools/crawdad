@@ -20,3 +20,6 @@ exclude = [".*"]
 default = ["alloc"]
 
 alloc = []
+
+[workspace]
+members = ["scan"]

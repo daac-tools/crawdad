@@ -1,0 +1,19 @@
+[package]
+name = "scan"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+crawdad = { path = ".." }
+clap = { version = "3.1", features = ["derive"] } # MIT or Apache-2.0
+yada = "0.5.0"
+
+[[bin]]
+name = "write"
+path = "src/write.rs"
+
+[[bin]]
+name = "crawdad"
+path = "src/crawdad.rs"
