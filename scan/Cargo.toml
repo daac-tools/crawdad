@@ -17,3 +17,7 @@ path = "src/write.rs"
 [[bin]]
 name = "crawdad"
 path = "src/crawdad.rs"
+
+[[bin]]
+name = "yada"
+path = "src/yada.rs"

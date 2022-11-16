@@ -7,7 +7,7 @@ use std::vec;
 use clap::Parser;
 
 #[derive(Parser, Debug)]
-#[clap(name = "crawdad", about = "A program to run crawdad.")]
+#[clap(name = "yada", about = "A program to run yada.")]
 struct Args {
     #[clap(short = 'i', long)]
     dict_path: PathBuf,
@@ -22,19 +22,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut reader = File::open(dict_path)?;
         reader.read_to_end(&mut bytes)?;
     }
-    let (trie, _) = crawdad::Trie::deserialize_from_slice(&bytes);
-
+    let trie = yada::DoubleArray::new(bytes);
     let mut dummy = 0;
-    let mut haystack = vec![];
 
     let lines = std::io::stdin().lock().lines();
     for line in lines {
-        let line = line?;
-        haystack.clear();
-        haystack.extend(line.chars());
-        for i in 0..haystack.len() {
-            for (v, _) in trie.common_prefix_search(haystack[i..].iter().copied()) {
-                dummy += v as usize;
+        let text = line?;
+        let text_bytes = text.as_bytes();
+        for i in 0..text_bytes.len() {
+            for (id, _) in trie.common_prefix_search(&text_bytes[i..]) {
+                dummy += id as usize;
             }
         }
     }
