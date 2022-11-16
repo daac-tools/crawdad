@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufRead, Read};
+use std::io::{BufRead, BufReader, Read};
 use std::path::PathBuf;
 use std::vec;
 
@@ -11,11 +11,15 @@ use clap::Parser;
 struct Args {
     #[clap(short = 'i', long)]
     dict_path: PathBuf,
+
+    #[clap(short = 't', long)]
+    text_path: PathBuf,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let dict_path = args.dict_path;
+    let text_path = args.text_path;
 
     let mut bytes = vec![];
     {
@@ -25,8 +29,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     let trie = yada::DoubleArray::new(bytes);
     let mut dummy = 0;
 
-    let lines = std::io::stdin().lock().lines();
-    for line in lines {
+    let reader = BufReader::new(File::open(text_path)?);
+    for line in reader.lines() {
         let text = line?;
         let text_bytes = text.as_bytes();
         for i in 0..text_bytes.len() {
