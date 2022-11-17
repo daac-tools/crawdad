@@ -14,12 +14,16 @@ struct Args {
 
     #[clap(short = 't', long)]
     text_path: PathBuf,
+
+    #[clap(short = 'n', long)]
+    num_runs: u32,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let dict_path = args.dict_path;
     let text_path = args.text_path;
+    let num_runs = args.num_runs;
 
     let mut bytes = vec![];
     {
@@ -35,7 +39,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let mut dummy = 0;
 
-    for _ in 0..100 {
+    for _ in 0..num_runs {
         for text in texts.lines() {
             let text_bytes = text.as_bytes();
             for i in 0..text_bytes.len() {

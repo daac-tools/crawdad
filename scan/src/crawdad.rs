@@ -14,12 +14,16 @@ struct Args {
 
     #[clap(short = 't', long)]
     text_path: PathBuf,
+
+    #[clap(short = 'n', long)]
+    num_runs: u32,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let dict_path = args.dict_path;
     let text_path = args.text_path;
+    let num_runs = args.num_runs;
 
     let mut bytes = vec![];
     {
@@ -37,7 +41,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let mut dummy = 0;
     let mut haystack = vec![];
 
-    for _ in 0..100 {
+    for _ in 0..num_runs {
         for line in texts.lines() {
             haystack.clear();
             haystack.extend(line.chars());
