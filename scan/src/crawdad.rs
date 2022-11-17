@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use std::io::Read;
 use std::path::PathBuf;
 use std::vec;
 
@@ -26,19 +26,25 @@ fn main() -> Result<(), Box<dyn Error>> {
         let mut reader = File::open(dict_path)?;
         reader.read_to_end(&mut bytes)?;
     }
+
     let (trie, _) = crawdad::Trie::deserialize_from_slice(&bytes);
+    let texts = {
+        let mut buf = String::new();
+        File::open(text_path)?.read_to_string(&mut buf)?;
+        buf
+    };
 
     let mut dummy = 0;
     let mut haystack = vec![];
 
-    let reader = BufReader::new(File::open(text_path)?);
-    for line in reader.lines() {
-        let line = line?;
-        haystack.clear();
-        haystack.extend(line.chars());
-        for i in 0..haystack.len() {
-            for (v, _) in trie.common_prefix_search(haystack[i..].iter().copied()) {
-                dummy += v as usize;
+    for _ in 0..100 {
+        for line in texts.lines() {
+            haystack.clear();
+            haystack.extend(line.chars());
+            for i in 0..haystack.len() {
+                for (v, _) in trie.common_prefix_search(haystack[i..].iter().copied()) {
+                    dummy += v as usize;
+                }
             }
         }
     }
