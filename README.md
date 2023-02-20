@@ -3,6 +3,7 @@
 [![Crates.io](https://img.shields.io/crates/v/crawdad)](https://crates.io/crates/crawdad)
 [![Documentation](https://docs.rs/crawdad/badge.svg)](https://docs.rs/crawdad)
 ![Build Status](https://github.com/daac-tools/crawdad/actions/workflows/rust.yml/badge.svg)
+[![Slack](https://img.shields.io/badge/join-chat-brightgreen?logo=slack)](https://join.slack.com/t/daac-tools/shared_invite/zt-1pwwqbcz4-KxL95Nam9VinpPlzUpEGyA)
 
 ## Overview
 
@@ -28,6 +29,13 @@ Crawdad contains the two trie implementations:
 
 - `crawdad::Trie` is a standard trie form that often provides the fastest queries.
 - `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings. 
+
+## Slack
+
+We have a Slack workspace for developers and users to ask questions and discuss a variety of topics.
+
+ * https://daac-tools.slack.com/
+ * Please get an invitation from [here](https://join.slack.com/t/daac-tools/shared_invite/zt-1pwwqbcz4-KxL95Nam9VinpPlzUpEGyA).
 
 ## License
 
