@@ -272,7 +272,7 @@ impl MpTrie {
 
     #[inline(always)]
     fn tail_iter(&self, tail_pos: usize) -> TailIter {
-        let tail_len = usize::try_from(self.tails[tail_pos]).unwrap();
+        let tail_len = usize::from(self.tails[tail_pos]);
         TailIter {
             trie: self,
             pos: tail_pos + 1,
@@ -417,7 +417,7 @@ impl Iterator for TailIter<'_> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.len != 0 {
             let c = utils::unpack_u32(&self.trie.tails[self.pos..], self.trie.code_size);
-            self.pos += usize::try_from(self.trie.code_size).unwrap();
+            self.pos += usize::from(self.trie.code_size);
             self.len -= 1;
             Some(c)
         } else {
