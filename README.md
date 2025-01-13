@@ -1,5 +1,7 @@
 # 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 
+test
+
 [![Crates.io](https://img.shields.io/crates/v/crawdad)](https://crates.io/crates/crawdad)
 [![Documentation](https://docs.rs/crawdad/badge.svg)](https://docs.rs/crawdad)
 ![Build Status](https://github.com/daac-tools/crawdad/actions/workflows/rust.yml/badge.svg)
@@ -28,7 +30,7 @@ The detailed experimental settings and other results are available on [Wiki](htt
 Crawdad contains the two trie implementations:
 
 - `crawdad::Trie` is a standard trie form that often provides the fastest queries.
-- `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings. 
+- `crawdad::MpTrie` is a minimal-prefix trie form that is memory-efficient for long strings.
 
 ## Slack
 
