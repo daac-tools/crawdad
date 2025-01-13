@@ -1,7 +1,5 @@
 # 🦞 Crawdad: ChaRActer-Wise Double-Array Dictionary
 
-test
-
 [![Crates.io](https://img.shields.io/crates/v/crawdad)](https://crates.io/crates/crawdad)
 [![Documentation](https://docs.rs/crawdad/badge.svg)](https://docs.rs/crawdad)
 ![Build Status](https://github.com/daac-tools/crawdad/actions/workflows/rust.yml/badge.svg)
