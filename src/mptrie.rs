@@ -507,4 +507,46 @@ mod tests {
     fn test_duplicate_keys() {
         assert!(MpTrie::from_keys(["AA", "AA"]).is_err());
     }
+
+    #[test]
+    fn test_single_key() {
+        let trie = MpTrie::from_keys(["a"]).unwrap();
+        assert_eq!(trie.exact_match("a".chars()), Some(0));
+        assert_eq!(trie.exact_match("".chars()), None);
+        assert_eq!(trie.exact_match("b".chars()), None);
+        assert_eq!(trie.exact_match("ab".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("ab".chars()).collect();
+        assert_eq!(matches, vec![(0, 1)]);
+    }
+
+    #[test]
+    fn test_single_long_key() {
+        let trie = MpTrie::from_keys(["世界中"]).unwrap();
+        assert_eq!(trie.exact_match("世界中".chars()), Some(0));
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世界".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("世界中で".chars()).collect();
+        assert_eq!(matches, vec![(0, 3)]);
+    }
+
+    #[test]
+    fn test_single_key_serialize() {
+        let trie = MpTrie::from_keys(["世界中"]).unwrap();
+
+        let bytes = trie.serialize_to_vec();
+        assert_eq!(trie.io_bytes(), bytes.len());
+
+        let (other, remain) = MpTrie::deserialize_from_slice(&bytes);
+        assert!(remain.is_empty());
+
+        assert_eq!(trie.mapper, other.mapper);
+        assert_eq!(trie.nodes, other.nodes);
+        assert_eq!(trie.tails, other.tails);
+        assert_eq!(trie.code_size, other.code_size);
+        assert_eq!(trie.value_size, other.value_size);
+    }
 }

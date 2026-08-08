@@ -409,6 +409,31 @@ mod tests {
     }
 
     #[test]
+    fn test_single_key() {
+        let trie = Trie::from_keys(["a"]).unwrap();
+        assert_eq!(trie.exact_match("a".chars()), Some(0));
+        assert_eq!(trie.exact_match("".chars()), None);
+        assert_eq!(trie.exact_match("b".chars()), None);
+        assert_eq!(trie.exact_match("ab".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("ab".chars()).collect();
+        assert_eq!(matches, vec![(0, 1)]);
+    }
+
+    #[test]
+    fn test_single_long_key() {
+        let trie = Trie::from_keys(["世界中"]).unwrap();
+        assert_eq!(trie.exact_match("世界中".chars()), Some(0));
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世界".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("世界中で".chars()).collect();
+        assert_eq!(matches, vec![(0, 3)]);
+    }
+
+    #[test]
     fn test_common_prefix_search_null() {
         let keys = vec!["世界\0", "世界中", "世間"];
         let trie = Trie::from_keys(&keys).unwrap();
