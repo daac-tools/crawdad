@@ -223,9 +223,10 @@ impl Builder {
         debug_assert!(self.is_fixed(node_idx));
 
         if let Some(suffixes) = self.suffixes.as_mut() {
-            // Note: The root must not be a leaf because finish() reserves its check field as a
-            // dummy value (i.e., it has no parent), and release_mptrie() would read the dummy
-            // value as a parent index.
+            // node_idx != 0 prevents the root from being a leaf because the root has no parent
+            // and release_mptrie() requires the check field of a leaf to indicate its parent.
+            // This condition holds only for a single-record set, where the root instead gets a
+            // child that holds the suffix.
             if spos + 1 == epos && node_idx != 0 {
                 // It has been checked in build_from_records().
                 debug_assert_eq!(self.records[spos].value & !OFFSET_MASK, 0);
