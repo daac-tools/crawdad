@@ -422,6 +422,19 @@ mod tests {
     }
 
     #[test]
+    fn test_single_record() {
+        let trie = Trie::from_records([("世界中", 42)]).unwrap();
+        assert_eq!(trie.exact_match("世界中".chars()), Some(42));
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世界".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("世界中で".chars()).collect();
+        assert_eq!(matches, vec![(42, 3)]);
+    }
+
+    #[test]
     fn test_common_prefix_search_null() {
         let keys = vec!["世界\0", "世界中", "世間"];
         let trie = Trie::from_keys(&keys).unwrap();
