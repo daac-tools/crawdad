@@ -261,7 +261,7 @@ impl MpTrie {
     ///     vec![(2, 0..2), (0, 3..5), (1, 3..6)]
     /// );
     /// ```
-    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<I> {
+    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<'_, I> {
         CommonPrefixSearchIter {
             haystack,
             haystack_pos: 0,
@@ -271,7 +271,7 @@ impl MpTrie {
     }
 
     #[inline(always)]
-    fn tail_iter(&self, tail_pos: usize) -> TailIter {
+    fn tail_iter(&self, tail_pos: usize) -> TailIter<'_> {
         let tail_len = usize::from(self.tails[tail_pos]);
         TailIter {
             trie: self,

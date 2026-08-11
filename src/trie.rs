@@ -217,7 +217,7 @@ impl Trie {
     ///     vec![(2, 0..2), (0, 3..5), (1, 3..6)]
     /// );
     /// ```
-    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<I> {
+    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<'_, I> {
         CommonPrefixSearchIter {
             haystack,
             haystack_pos: 0,
