@@ -261,7 +261,7 @@ impl MpTrie {
     ///     vec![(2, 0..2), (0, 3..5), (1, 3..6)]
     /// );
     /// ```
-    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<I> {
+    pub const fn common_prefix_search<I>(&self, haystack: I) -> CommonPrefixSearchIter<'_, I> {
         CommonPrefixSearchIter {
             haystack,
             haystack_pos: 0,
@@ -271,7 +271,7 @@ impl MpTrie {
     }
 
     #[inline(always)]
-    fn tail_iter(&self, tail_pos: usize) -> TailIter {
+    fn tail_iter(&self, tail_pos: usize) -> TailIter<'_> {
         let tail_len = usize::from(self.tails[tail_pos]);
         TailIter {
             trie: self,
@@ -506,5 +506,31 @@ mod tests {
     #[test]
     fn test_duplicate_keys() {
         assert!(MpTrie::from_keys(["AA", "AA"]).is_err());
+    }
+
+    #[test]
+    fn test_single_key() {
+        let trie = MpTrie::from_keys(["世界中"]).unwrap();
+        assert_eq!(trie.exact_match("世界中".chars()), Some(0));
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世界".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("世界中で".chars()).collect();
+        assert_eq!(matches, vec![(0, 3)]);
+    }
+
+    #[test]
+    fn test_single_record() {
+        let trie = MpTrie::from_records([("世界中", 42)]).unwrap();
+        assert_eq!(trie.exact_match("世界中".chars()), Some(42));
+        assert_eq!(trie.exact_match("世".chars()), None);
+        assert_eq!(trie.exact_match("世界".chars()), None);
+        assert_eq!(trie.exact_match("世界中で".chars()), None);
+        assert_eq!(trie.exact_match("日本".chars()), None);
+
+        let matches: Vec<_> = trie.common_prefix_search("世界中で".chars()).collect();
+        assert_eq!(matches, vec![(42, 3)]);
     }
 }
